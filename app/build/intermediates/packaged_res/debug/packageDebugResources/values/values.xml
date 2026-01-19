@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">Task Manager</string>
-    <style name="Theme.TaskManager" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#000000</item>
-    </style>
-</resources>
