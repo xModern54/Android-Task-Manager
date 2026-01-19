@@ -1,0 +1,7 @@
+#Tue Jan 20 00:11:49 YEKT 2026
+base.1=/Users/xmodern/Desktop/andr/TaskManager/app/build/intermediates/dex/release/mergeDexRelease/classes2.dex
+path.1=classes2.dex
+base.0=/Users/xmodern/Desktop/andr/TaskManager/app/build/intermediates/dex/release/mergeDexRelease/classes.dex
+renamed.1=classes2.dex
+renamed.0=classes.dex
+path.0=classes.dex
