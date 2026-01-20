@@ -6,7 +6,7 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath("org.mozilla.rust-android-gradle:plugin:0.9.3")
+        // No extra plugins needed for C++
     }
 }
 

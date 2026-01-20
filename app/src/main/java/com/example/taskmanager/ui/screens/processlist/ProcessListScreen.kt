@@ -16,11 +16,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
@@ -38,6 +47,7 @@ fun ProcessListScreen(
 ) {
     val processList by viewModel.processList.collectAsState()
     val layoutDirection = LocalLayoutDirection.current
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -45,7 +55,42 @@ fun ProcessListScreen(
                 title = { Text("Task Manager", color = TextWhite) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = DarkSurface
-                )
+                ),
+                actions = {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Sort",
+                            tint = TextWhite
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Sort by Name") },
+                            onClick = {
+                                viewModel.updateSortOption(SortOption.NAME)
+                                menuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Sort by CPU") },
+                            onClick = {
+                                viewModel.updateSortOption(SortOption.CPU)
+                                menuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Sort by RAM") },
+                            onClick = {
+                                viewModel.updateSortOption(SortOption.RAM)
+                                menuExpanded = false
+                            }
+                        )
+                    }
+                }
             )
         },
         containerColor = DarkBackground,

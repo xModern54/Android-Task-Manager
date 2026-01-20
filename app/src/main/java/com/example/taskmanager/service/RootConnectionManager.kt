@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.util.Log
 import com.example.taskmanager.IRootService
 import com.topjohnwu.superuser.ipc.RootService
 
@@ -15,20 +16,26 @@ class RootConnectionManager(private val context: Context) {
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            Log.d("TaskManager", "RootService Connected")
             rootService = IRootService.Stub.asInterface(service)
             isBound = true
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
+            Log.d("TaskManager", "RootService Disconnected")
             rootService = null
             isBound = false
         }
     }
 
     fun bind() {
+        Log.d("TaskManager", "Attempting to bind RootService...")
         val intent = Intent(context, RootBackendService::class.java)
-        // Libsu specific: binds the service in the root process
-        RootService.bind(intent, connection)
+        try {
+            RootService.bind(intent, connection)
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Failed to bind RootService", e)
+        }
     }
 
     fun unbind() {
@@ -38,11 +45,13 @@ class RootConnectionManager(private val context: Context) {
         }
     }
 
-    fun getProcessListJson(): String? {
+    fun getProcessList(): String? {
         return try {
-            rootService?.processListJson
+            val result = rootService?.processList
+            Log.d("TaskManager", "Fetched Data Length: ${result?.length ?: "null"}")
+            result
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("TaskManager", "Error fetching process list", e)
             null
         }
     }

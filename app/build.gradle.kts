@@ -3,14 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-apply(plugin = "org.mozilla.rust-android-gradle.rust-android")
-
-extensions.getByName("cargo").let {
-    it::class.java.getMethod("setModule", String::class.java).invoke(it, "../rust_backend")
-    it::class.java.getMethod("setLibname", String::class.java).invoke(it, "rust_backend")
-    it::class.java.getMethod("setTargets", List::class.java).invoke(it, listOf("arm64", "x86_64"))
-}
-
 android {
     namespace = "com.example.taskmanager"
     compileSdk = 34
@@ -20,12 +12,25 @@ android {
         applicationId = "com.example.taskmanager"
         minSdk = 24
         targetSdk = 34
-        versionCode = 6
-        versionName = "1.5.0"
+        versionCode = 8
+        versionName = "1.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+        
+        externalNativeBuild {
+            cmake {
+                cppFlags("-std=c++17")
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 
@@ -49,11 +54,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -81,6 +86,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.accompanist:accompanist-drawablepainter:0.32.0")
     
     // Libsu (Root)
     implementation("com.github.topjohnwu.libsu:core:5.2.2")
