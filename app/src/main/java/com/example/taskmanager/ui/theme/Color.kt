@@ -10,6 +10,5 @@ val NeonCyan = Color(0xFF00E5FF)
 val TextWhite = Color(0xFFEEEEEE)
 val TextGrey = Color(0xFFB0B0B0)
 
-// Heatmap Colors (Semi-transparent)
-val CpuModerate = Color(0x4DFF9800) // Orange 30%
-val CpuCritical = Color(0x4DFF5252) // Red 30%
+// Heatmap Colors
+val HeatmapBaseColor = Color(0xFFE65100) // Deep Orange

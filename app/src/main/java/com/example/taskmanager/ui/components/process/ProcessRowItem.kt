@@ -22,9 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.taskmanager.domain.model.ProcessInfo
-import com.example.taskmanager.ui.theme.CpuCritical
-import com.example.taskmanager.ui.theme.CpuModerate
 import com.example.taskmanager.ui.theme.DividerGrey
+import com.example.taskmanager.ui.theme.HeatmapBaseColor
 import com.example.taskmanager.ui.theme.TextGrey
 import com.example.taskmanager.ui.theme.TextWhite
 import java.util.Locale
@@ -35,10 +34,10 @@ fun ProcessRowItem(process: ProcessInfo) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp), // Fixed height for alignment
+                .height(48.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Column 1: Name and Package
+            // Column 1: Name and Package (No Heatmap)
             Column(
                 modifier = Modifier
                     .weight(0.5f)
@@ -63,18 +62,15 @@ fun ProcessRowItem(process: ProcessInfo) {
             }
 
             // Column 2: CPU Heatmap
-            val cpuBg = when {
-                process.cpuUsage > 40.0 -> CpuCritical
-                process.cpuUsage > 10.0 -> CpuModerate
-                else -> Color.Transparent
-            }
+            // Map 0..100% to alpha 0.15..0.90
+            val cpuAlpha = calculateAlpha(process.cpuUsage, 100.0)
             
             Box(
                 modifier = Modifier
                     .weight(0.2f)
                     .fillMaxHeight()
-                    .background(cpuBg)
-                    .padding(end = 8.dp), // Padding for text inside the box
+                    .background(HeatmapBaseColor.copy(alpha = cpuAlpha))
+                    .padding(end = 8.dp),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Text(
@@ -86,11 +82,17 @@ fun ProcessRowItem(process: ProcessInfo) {
                 )
             }
 
-            // Column 3: RAM (Standard, no heatmap for now as per specific request for CPU logic, but we can align it same way)
+            // Column 3: RAM Heatmap
+            // Assuming scaling against a 4GB visualization cap for now
+            // 4GB = 4 * 1024 * 1024 * 1024 bytes
+            val ramMax = 4L * 1024 * 1024 * 1024
+            val ramAlpha = calculateAlpha(process.ramUsage.toDouble(), ramMax.toDouble())
+
             Box(
                 modifier = Modifier
                     .weight(0.3f)
                     .fillMaxHeight()
+                    .background(HeatmapBaseColor.copy(alpha = ramAlpha))
                     .padding(end = 16.dp),
                 contentAlignment = Alignment.CenterEnd
             ) {
@@ -105,6 +107,14 @@ fun ProcessRowItem(process: ProcessInfo) {
         }
         Divider(color = DividerGrey, thickness = 1.dp)
     }
+}
+
+private fun calculateAlpha(value: Double, max: Double): Float {
+    val minAlpha = 0.15f
+    val maxAlpha = 0.90f
+    
+    val ratio = (value / max).coerceIn(0.0, 1.0).toFloat()
+    return minAlpha + (ratio * (maxAlpha - minAlpha))
 }
 
 private fun formatBytes(bytes: Long): String {
