@@ -3,9 +3,18 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+apply(plugin = "org.mozilla.rust-android-gradle.rust-android")
+
+extensions.getByName("cargo").let {
+    it::class.java.getMethod("setModule", String::class.java).invoke(it, "../rust_backend")
+    it::class.java.getMethod("setLibname", String::class.java).invoke(it, "rust_backend")
+    it::class.java.getMethod("setTargets", List::class.java).invoke(it, listOf("arm64", "x86_64"))
+}
+
 android {
     namespace = "com.example.taskmanager"
     compileSdk = 34
+    ndkVersion = "26.1.10909125"
 
     defaultConfig {
         applicationId = "com.example.taskmanager"
@@ -48,6 +57,7 @@ android {
     }
     buildFeatures {
         compose = true
+        aidl = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.11"
@@ -70,7 +80,12 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    implementation("com.google.code.gson:gson:2.10.1")
     
+    // Libsu (Root)
+    implementation("com.github.topjohnwu.libsu:core:5.2.2")
+    implementation("com.github.topjohnwu.libsu:service:5.2.2")
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
