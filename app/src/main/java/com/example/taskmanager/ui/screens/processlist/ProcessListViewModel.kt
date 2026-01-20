@@ -1,58 +1,65 @@
 package com.example.taskmanager.ui.screens.processlist
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.taskmanager.domain.model.NativeProcessInfo
 import com.example.taskmanager.domain.model.ProcessInfo
+import com.example.taskmanager.service.RootConnectionManager
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.random.Random
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
-class ProcessListViewModel : ViewModel() {
+class ProcessListViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _processList = MutableStateFlow<List<ProcessInfo>>(emptyList())
     val processList: StateFlow<List<ProcessInfo>> = _processList.asStateFlow()
 
+    private val rootManager = RootConnectionManager(application)
+    private val gson = Gson()
+
     init {
-        generateMockData()
+        rootManager.bind()
+        startPolling()
     }
 
-    private fun generateMockData() {
-        val processNames = listOf(
-            "System UI" to "com.android.systemui",
-            "Kernel" to "root",
-            "Chrome" to "com.android.chrome",
-            "Telegram" to "org.telegram.messenger",
-            "Spotify" to "com.spotify.music",
-            "Settings" to "com.android.settings",
-            "GMS" to "com.google.android.gms",
-            "Launcher" to "com.android.launcher3",
-            "Camera" to "com.android.camera2",
-            "Phone" to "com.android.dialer"
-        )
-
-        val mockList = MutableList(50) { index ->
-            val (name, pkg) = processNames.random()
-            // Randomize slightly
-            val uniquePid = 1000 + index
-            
-            // Generate realistic-ish values
-            val isHighLoad = Random.nextBoolean() && Random.nextBoolean() // Occasional high load
-            val cpu = if (isHighLoad) Random.nextDouble(10.0, 99.0) else Random.nextDouble(0.0, 5.0)
-            
-            val ramBase = 1024 * 1024 * 50L // 50MB min
-            val ramMax = 1024 * 1024 * 1024 * 2L // 2GB max
-            val ram = Random.nextLong(ramBase, ramMax)
-
-            ProcessInfo(
-                pid = uniquePid,
-                name = "$name ${index + 1}", // Append index to make unique names visually
-                packageName = pkg,
-                cpuUsage = cpu,
-                ramUsage = ram
-            )
+    private fun startPolling() {
+        viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                val json = rootManager.getProcessListJson()
+                if (json != null) {
+                    try {
+                        val type = object : TypeToken<List<NativeProcessInfo>>() {}.type
+                        val nativeList: List<NativeProcessInfo> = gson.fromJson(json, type)
+                        
+                        val uiList = nativeList.map { native ->
+                            ProcessInfo(
+                                pid = native.pid,
+                                name = native.name,
+                                packageName = "", // Not parsed yet
+                                cpuUsage = 0.0, // Not implemented yet
+                                ramUsage = native.ramUsage
+                            )
+                        }
+                        
+                        _processList.value = uiList.sortedBy { it.pid }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                delay(2000) // Poll every 2 seconds
+            }
         }
-        
-        // Sort by CPU usage descending to show "heatmap" logic at top initially
-        _processList.value = mockList.sortedByDescending { it.cpuUsage }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        rootManager.unbind()
     }
 }
