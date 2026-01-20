@@ -110,11 +110,9 @@ fun ProcessRowItem(process: ProcessInfo) {
 }
 
 private fun calculateAlpha(value: Double, max: Double): Float {
-    val minAlpha = 0.15f
-    val maxAlpha = 0.90f
-    
-    val ratio = (value / max).coerceIn(0.0, 1.0).toFloat()
-    return minAlpha + (ratio * (maxAlpha - minAlpha))
+    val intensity = (value / max).coerceIn(0.0, 1.0).toFloat()
+    // Windows Style: Very subtle at 0%, rich at 100%
+    return 0.05f + (intensity * 0.80f)
 }
 
 private fun formatBytes(bytes: Long): String {

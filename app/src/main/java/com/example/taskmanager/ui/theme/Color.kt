@@ -11,4 +11,4 @@ val TextWhite = Color(0xFFEEEEEE)
 val TextGrey = Color(0xFFB0B0B0)
 
 // Heatmap Colors
-val HeatmapBaseColor = Color(0xFFE65100) // Deep Orange
+val HeatmapBaseColor = Color(0xFFD32F2F) // WinTM Deep Red/Orange
