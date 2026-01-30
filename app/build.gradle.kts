@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.taskmanager"
         minSdk = 24
         targetSdk = 34
-        versionCode = 22
-        versionName = "1.7.14"
+        versionCode = 23
+        versionName = "1.7.15"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
