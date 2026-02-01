@@ -5,6 +5,7 @@
 *.aab
 TaskManager-Release/
 TaskManager-Release.apk
+devices_mapping.db
 release/*.apk
 release/*.aab
 

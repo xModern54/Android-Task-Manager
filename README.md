@@ -11,6 +11,13 @@ This project targets low-level, system-oriented visibility on rooted devices and
 - Performance screen with live charts for CPU, GPU, Memory, Disk, and Network
 - Native backend (NDK) for system metrics and root-only access
 
+## Screenshots
+
+<p>
+  <img src="docs/images/process_list.png" alt="Process List" width="460" style="max-width: 100%; height: auto;" />
+  <img src="docs/images/performance.png" alt="Performance" width="460" style="max-width: 100%; height: auto;" />
+</p>
+
 ## Requirements
 These versions are used by this project:
 - Java: 17
@@ -36,13 +43,6 @@ app/build/outputs/apk/release/app-release.apk
 
 ## Root Requirement
 The app requires root for process and performance metrics (libsu RootService). Without root, the app will not function as intended.
-
-## Screenshots
-
-<p>
-  <img src="docs/images/process_list.png" alt="Process List" width="320" style="max-width: 100%; height: auto;" />
-  <img src="docs/images/performance.png" alt="Performance" width="320" style="max-width: 100%; height: auto;" />
-</p>
 
 ## Project Structure
 - `app/src/main/java/` - Kotlin/Compose UI and ViewModels
