@@ -39,13 +39,10 @@ The app requires root for process and performance metrics (libsu RootService). W
 
 ## Screenshots
 
-Process List:
-
-![Process List](docs/screenshots/process_list.png)
-
-Performance:
-
-![Performance](docs/screenshots/performance.png)
+<p>
+  <img src="docs/images/process_list.png" alt="Process List" width="320" style="max-width: 100%; height: auto;" />
+  <img src="docs/images/performance.png" alt="Performance" width="320" style="max-width: 100%; height: auto;" />
+</p>
 
 ## Project Structure
 - `app/src/main/java/` - Kotlin/Compose UI and ViewModels
