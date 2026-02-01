@@ -3,6 +3,8 @@ package com.example.taskmanager.ui.screens.performance
 import android.app.Application
 import android.util.Log
 import android.net.wifi.WifiManager
+import android.net.ConnectivityManager
+import android.net.LinkAddress
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskmanager.service.RootConnectionManager
@@ -15,6 +17,7 @@ import org.json.JSONObject
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.util.Collections
+import java.util.concurrent.TimeUnit
 
 
 data class CpuSnapshot(
@@ -131,6 +134,9 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
     private var lastNetRxPackets: Long = 0
     private var lastNetTxPackets: Long = 0
     private var lastNetTimestampMs: Long = 0
+    private var lastNetSsid: String? = null
+    private var lastNetSsidTimeMs: Long = 0
+    private var lastNetIpv4: String? = null
 
     init {
         rootManager.bind()
@@ -335,8 +341,8 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                 lastNetTimestampMs = timestampMs
 
                 val adapterLabel = if (iface.startsWith("wlan")) "Wi‑Fi" else "Ethernet"
-                val ssid = if (iface.startsWith("wlan")) getWifiSsid() else "—"
-                val ipv4 = if (iface.isNotBlank()) getIpv4Address(iface) else "—"
+                val ssid = if (iface.startsWith("wlan")) getWifiSsidCached(iface) else "—"
+                val ipv4 = if (iface.isNotBlank()) getIpv4AddressCached(iface) else "—"
 
                 val snapshot = NetSnapshot(
                     iface = iface,
@@ -365,26 +371,106 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    private fun getWifiSsid(): String {
+    private fun getWifiSsidCached(iface: String): String {
+        val now = System.currentTimeMillis()
+        if (!lastNetSsid.isNullOrBlank() && now - lastNetSsidTimeMs < 10_000) {
+            return lastNetSsid ?: "—"
+        }
         return try {
             val wifi = getApplication<Application>().applicationContext.getSystemService(WifiManager::class.java)
-            val ssid = wifi?.connectionInfo?.ssid ?: return "—"
-            if (ssid == "<unknown ssid>" || ssid.isBlank()) "—" else ssid.trim('"')
+            val ssid = wifi?.connectionInfo?.ssid
+            val cleaned = cleanSsid(ssid)
+            if (cleaned != null) {
+                lastNetSsid = cleaned
+                lastNetSsidTimeMs = now
+                return cleaned
+            }
+            val rootSsid = readWifiSsidFromRoot()
+            if (!rootSsid.isNullOrBlank()) {
+                lastNetSsid = rootSsid
+                lastNetSsidTimeMs = now
+                return rootSsid
+            }
+            lastNetSsid ?: "—"
         } catch (e: Exception) {
-            "—"
+            lastNetSsid ?: "—"
         }
     }
 
-    private fun getIpv4Address(iface: String): String {
+    private fun getIpv4AddressCached(iface: String): String {
         return try {
-            val interfaces = NetworkInterface.getNetworkInterfaces() ?: return "—"
-            val list = Collections.list(interfaces)
-            val netIf = list.firstOrNull { it.name == iface } ?: return "—"
-            val addrs = Collections.list(netIf.inetAddresses)
-            addrs.firstOrNull { it is Inet4Address && !it.isLoopbackAddress }
-                ?.hostAddress ?: "—"
+            val cm = getApplication<Application>().applicationContext.getSystemService(ConnectivityManager::class.java)
+            val lp = cm?.getLinkProperties(cm.activeNetwork)
+            val ifaceName = lp?.interfaceName ?: iface
+            val fromLp = lp?.linkAddresses
+                ?.firstOrNull { it.address is Inet4Address && !it.address.isLoopbackAddress && !it.address.isLinkLocalAddress }
+                ?.address?.hostAddress
+            if (!fromLp.isNullOrBlank()) {
+                lastNetIpv4 = fromLp
+                return fromLp
+            }
+            val fallback = getIpv4FromInterface(ifaceName)
+            if (!fallback.isNullOrBlank()) {
+                lastNetIpv4 = fallback
+                return fallback
+            }
+            lastNetIpv4 ?: "—"
         } catch (e: Exception) {
-            "—"
+            lastNetIpv4 ?: "—"
+        }
+    }
+
+    private fun getIpv4FromInterface(iface: String): String? {
+        val interfaces = NetworkInterface.getNetworkInterfaces() ?: return null
+        val list = Collections.list(interfaces)
+        val netIf = list.firstOrNull { it.name == iface } ?: return null
+        val addrs = Collections.list(netIf.inetAddresses)
+        return addrs.firstOrNull { it is Inet4Address && !it.isLoopbackAddress && !it.isLinkLocalAddress }
+            ?.hostAddress
+    }
+
+    private fun cleanSsid(raw: String?): String? {
+        if (raw.isNullOrBlank()) return null
+        if (raw == "<unknown ssid>" || raw == "0x" || raw == "0x0") return null
+        val trimmed = raw.trim().trim('"')
+        if (trimmed.isBlank()) return null
+        return trimmed
+    }
+
+    private fun readWifiSsidFromRoot(): String? {
+        val out = runRootCommand("cmd wifi status")
+        val ssid = extractSsidFromText(out)
+        if (!ssid.isNullOrBlank()) return ssid
+        val out2 = runRootCommand("dumpsys wifi | grep -m 1 -E 'SSID|mWifiInfo'")
+        return extractSsidFromText(out2)
+    }
+
+    private fun extractSsidFromText(text: String?): String? {
+        if (text.isNullOrBlank()) return null
+        text.lineSequence().forEach { line ->
+            val idx = line.indexOf("SSID:")
+            if (idx >= 0) {
+                val value = line.substring(idx + 5).trim().trim('"')
+                if (value.isNotBlank()) return value
+            }
+            if (line.contains("SSID=")) {
+                val parts = line.split("SSID=")
+                if (parts.size >= 2) {
+                    val value = parts[1].trim().trim('"')
+                    if (value.isNotBlank()) return value
+                }
+            }
+        }
+        return null
+    }
+
+    private fun runRootCommand(cmd: String): String? {
+        return try {
+            val proc = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
+            proc.waitFor(2, TimeUnit.SECONDS)
+            proc.inputStream.bufferedReader().readText()
+        } catch (e: Exception) {
+            null
         }
     }
 
