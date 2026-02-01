@@ -161,7 +161,7 @@ object PerformanceSampleRepository {
         val color = Color(0xFFB59AF0)
         return PerformanceCategory(
             id = "gpu",
-            displayName = "GPU 0",
+            displayName = "GPU",
             summaryText = "0% (49°C)",
             seriesColor = color,
             timeSeries = series(seed = 4, base = 6f, variation = 8f, spike = 12f),

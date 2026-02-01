@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -216,16 +217,19 @@ private fun MainPanel(category: PerformanceCategory, modifier: Modifier = Modifi
 private fun Header(category: PerformanceCategory) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = category.displayName,
             color = PrimaryText,
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.alignBy(FirstBaseline)
         )
 
-        Column(horizontalAlignment = Alignment.End) {
+        Column(
+            horizontalAlignment = Alignment.End,
+            modifier = Modifier.alignBy(FirstBaseline)
+        ) {
             if (category.id == "memory") {
                 Text(
                     text = category.headerRightPrimary,
