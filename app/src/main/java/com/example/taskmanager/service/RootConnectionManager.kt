@@ -434,4 +434,13 @@ class RootConnectionManager(private val context: Context) {
         }
     }
 
+    fun getDiskSnapshotJson(): String? {
+        return try {
+            rootService?.diskSnapshotJson
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error getting disk snapshot", e)
+            null
+        }
+    }
+
 }

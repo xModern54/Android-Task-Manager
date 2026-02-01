@@ -63,9 +63,12 @@ fun PerformanceScreen(
     gpuSeries: List<Float>,
     memorySnapshot: MemorySnapshot?,
     memorySeries: List<Float>,
+    diskSnapshot: DiskSnapshot?,
+    diskSeries: List<Float>,
     onCpuPoll: () -> Unit,
     onGpuPoll: () -> Unit,
-    onMemoryPoll: () -> Unit
+    onMemoryPoll: () -> Unit,
+    onDiskPoll: () -> Unit
 ) {
     var selectedId by remember { mutableStateOf("memory") }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -87,6 +90,11 @@ fun PerformanceScreen(
                     onMemoryPoll()
                     delay(500)
                 }
+            } else if (selectedId == "disk") {
+                while (isActive) {
+                    onDiskPoll()
+                    delay(500)
+                }
             }
         }
     }
@@ -98,6 +106,8 @@ fun PerformanceScreen(
             gpuCategoryFromSnapshot(category, gpuSnapshot, gpuSeries)
         } else if (category.id == "memory" && memorySnapshot != null) {
             memoryCategoryFromSnapshot(category, memorySnapshot, memorySeries)
+        } else if (category.id == "disk" && diskSnapshot != null) {
+            diskCategoryFromSnapshot(category, diskSnapshot, diskSeries)
         } else {
             category
         }
@@ -733,6 +743,49 @@ private fun memoryCategoryFromSnapshot(
     )
 }
 
+private fun diskCategoryFromSnapshot(
+    base: PerformanceCategory,
+    snapshot: DiskSnapshot,
+    series: List<Float>
+): PerformanceCategory {
+    val mountLabel = if (snapshot.mountPoint.isNotBlank()) {
+        "Disk (${snapshot.mountPoint})"
+    } else {
+        "Disk"
+    }
+    val activeText = formatPercent(snapshot.activeTimePct)
+    val readText = formatBytesPerSec(snapshot.readBps)
+    val writeText = formatBytesPerSec(snapshot.writeBps)
+    val avgResponse = if (snapshot.avgResponseMs > 0.0) {
+        String.format("%.1f ms", snapshot.avgResponseMs)
+    } else {
+        "—"
+    }
+    val summary = "${activeText} R:${readText} W:${writeText}"
+    val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+
+    return base.copy(
+        displayName = mountLabel,
+        summaryText = summary,
+        hardwareName = "Internal drive",
+        hardwareSubtitle = null,
+        timeSeries = chartSeries,
+        leftStats = listOf(
+            StatItem("Active time", activeText),
+            StatItem("Average response time", avgResponse),
+            StatItem("Read speed", readText)
+        ),
+        rightStats = listOf(
+            StatItem("Write speed", writeText),
+            StatItem("Capacity", formatBytesGb(snapshot.totalBytes)),
+            StatItem("Available", formatBytesGb(snapshot.availableBytes))
+        ),
+        metaStats = listOf(
+            StatItem("Type:", "Internal drive")
+        )
+    )
+}
+
 private fun formatPercent(value: Double): String {
     return if (value.isNaN()) {
         "—"
@@ -772,6 +825,17 @@ private fun formatBytesMb(bytes: Long): String {
     if (bytes <= 0) return "0 MB"
     val mb = bytes / 1_048_576.0
     return String.format("%.0f MB", mb)
+}
+
+private fun formatBytesPerSec(bytesPerSec: Long): String {
+    if (bytesPerSec <= 0) return "0 KB/s"
+    val kb = bytesPerSec / 1024.0
+    return if (kb < 1024.0) {
+        String.format("%.0f KB/s", kb)
+    } else {
+        val mb = kb / 1024.0
+        String.format("%.1f MB/s", mb)
+    }
 }
 
 private fun formatDriverDate(iso: String): String {

@@ -10,8 +10,7 @@ object PerformanceSampleRepository {
         return listOf(
             cpuCategory(),
             memoryCategory(),
-            diskCategory("disk0", "Disk 0 (C:)", "0% SSD", Color(0xFF7ED957)),
-            diskCategory("disk1", "Disk 1 (D:)", "0% SSD", Color(0xFF7ED957)),
+            diskCategory(),
             ethernetCategory(),
             gpuCategory()
         )
@@ -102,16 +101,17 @@ object PerformanceSampleRepository {
         return result
     }
 
-    private fun diskCategory(id: String, name: String, summary: String, color: Color): PerformanceCategory {
+    private fun diskCategory(): PerformanceCategory {
+        val color = Color(0xFF7ED957)
         return PerformanceCategory(
-            id = id,
-            displayName = name,
-            summaryText = summary,
+            id = "disk",
+            displayName = "Disk (/data)",
+            summaryText = "0% R:0 KB/s W:0 KB/s",
             seriesColor = color,
-            timeSeries = series(seed = id.hashCode(), base = 2f, variation = 6f, spike = 8f),
-            hardwareName = "UFS 3.1 Internal",
-            headerRightPrimary = "SSD",
-            headerRightSecondary = "0%",
+            timeSeries = series(seed = 5, base = 2f, variation = 6f, spike = 8f),
+            hardwareName = "Internal drive",
+            headerRightPrimary = "",
+            headerRightSecondary = "",
             chartLabel = "Disk activity",
             leftStats = listOf(
                 StatItem("Active time", "0%"),
@@ -121,12 +121,10 @@ object PerformanceSampleRepository {
             rightStats = listOf(
                 StatItem("Write speed", "0 KB/s"),
                 StatItem("Capacity", "512 GB"),
-                StatItem("Formatted", "512 GB")
+                StatItem("Available", "512 GB")
             ),
             metaStats = listOf(
-                StatItem("System disk:", "Yes"),
-                StatItem("Page file:", "Yes"),
-                StatItem("Type:", "SSD")
+                StatItem("Type:", "Internal drive")
             )
         )
     }

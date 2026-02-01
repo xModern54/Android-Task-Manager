@@ -60,6 +60,20 @@ data class MemorySnapshot(
     val timestampMs: Long
 )
 
+data class DiskSnapshot(
+    val totalBytes: Long,
+    val usedBytes: Long,
+    val availableBytes: Long,
+    val readBps: Long,
+    val writeBps: Long,
+    val activeTimePct: Double,
+    val avgResponseMs: Double,
+    val mountPoint: String,
+    val blockDevice: String,
+    val timestampMs: Long,
+    val error: String
+)
+
 class PerformanceViewModel(application: Application) : AndroidViewModel(application) {
     private val rootManager = RootConnectionManager(application)
     private var tempLogCounter = 0
@@ -81,6 +95,12 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _memorySeries = MutableStateFlow<List<Float>>(emptyList())
     val memorySeries: StateFlow<List<Float>> = _memorySeries.asStateFlow()
+
+    private val _diskSnapshot = MutableStateFlow<DiskSnapshot?>(null)
+    val diskSnapshot: StateFlow<DiskSnapshot?> = _diskSnapshot.asStateFlow()
+
+    private val _diskSeries = MutableStateFlow<List<Float>>(emptyList())
+    val diskSeries: StateFlow<List<Float>> = _diskSeries.asStateFlow()
 
     init {
         rootManager.bind()
@@ -201,6 +221,40 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                 }
             } catch (e: Exception) {
                 Log.e("TaskManager", "Memory snapshot parse error", e)
+            }
+        }
+    }
+
+    fun refreshDiskSnapshot() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val json = rootManager.getDiskSnapshotJson() ?: return@launch
+            try {
+                val obj = JSONObject(json)
+                val snapshot = DiskSnapshot(
+                    totalBytes = obj.optLong("totalBytes", 0L),
+                    usedBytes = obj.optLong("usedBytes", 0L),
+                    availableBytes = obj.optLong("availableBytes", 0L),
+                    readBps = obj.optLong("readBps", 0L),
+                    writeBps = obj.optLong("writeBps", 0L),
+                    activeTimePct = obj.optDouble("activeTimePct", 0.0),
+                    avgResponseMs = obj.optDouble("avgResponseMs", 0.0),
+                    mountPoint = obj.optString("mountPoint", "/data"),
+                    blockDevice = obj.optString("blockDevice", ""),
+                    timestampMs = obj.optLong("timestampMs", 0L),
+                    error = obj.optString("error", "")
+                )
+                _diskSnapshot.value = snapshot
+                val clamped = snapshot.activeTimePct.coerceIn(0.0, 100.0).toFloat()
+                val current = _diskSeries.value
+                val updated = (current + clamped).takeLast(60)
+                _diskSeries.value = if (updated.size < 60) {
+                    val pad = List(60 - updated.size) { clamped }
+                    pad + updated
+                } else {
+                    updated
+                }
+            } catch (e: Exception) {
+                Log.e("TaskManager", "Disk snapshot parse error", e)
             }
         }
     }

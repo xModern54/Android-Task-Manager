@@ -37,6 +37,8 @@ object NativeBridge {
     external fun getGpuSnapshotJson(): String
 
     external fun getMemorySnapshotJson(): String
+
+    external fun getDiskSnapshotJson(): String
 }
 
                 

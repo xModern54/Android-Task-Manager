@@ -216,6 +216,10 @@ class RootBackendService : RootService() {
                                                                 return NativeBridge.getMemorySnapshotJson()
                                                             }
 
+                                                            override fun getDiskSnapshotJson(): String {
+                                                                return NativeBridge.getDiskSnapshotJson()
+                                                            }
+
 
 
             
