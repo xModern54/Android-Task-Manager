@@ -656,6 +656,7 @@ private fun gpuCategoryFromSnapshot(
     val totalMemory = formatBytesGb(snapshot.dedicatedTotalBytes)
     val vulkanVersion = if (snapshot.vulkanApiVersion.isNotBlank()) snapshot.vulkanApiVersion else "—"
     val driver = if (snapshot.vulkanDriverVersion.isNotBlank()) snapshot.vulkanDriverVersion else "—"
+    val driverDate = formatDriverDate(snapshot.driverDateIso)
 
     return base.copy(
         summaryText = summary,
@@ -668,7 +669,8 @@ private fun gpuCategoryFromSnapshot(
         ),
         rightStats = listOf(
             StatItem("Vulkan", vulkanVersion),
-            StatItem("Driver", driver)
+            StatItem("Driver", driver),
+            StatItem("Driver date", driverDate)
         )
     )
 }
@@ -706,4 +708,12 @@ private fun formatBytesGb(bytes: Long): String {
     if (bytes <= 0) return "—"
     val gb = bytes / 1_073_741_824.0
     return String.format("%.1f GB", gb)
+}
+
+private fun formatDriverDate(iso: String): String {
+    if (iso.length != 10 || iso[4] != '-' || iso[7] != '-') return "—"
+    val year = iso.substring(0, 4)
+    val month = iso.substring(5, 7)
+    val day = iso.substring(8, 10)
+    return "$day.$month.$year"
 }
