@@ -1,0 +1,14 @@
+package com.xmodern.taskmgmt.ui.screens.processlist
+
+import android.graphics.drawable.Drawable
+
+data class ProcessUiModel(
+    val pid: Int,
+    val rawName: String,
+    val label: String,
+    val icon: Drawable?,
+    val isSystem: Boolean,
+    val cpuUsage: Double,
+    val ramUsage: Long,
+    val nice: Int = 0
+)

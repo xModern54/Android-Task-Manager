@@ -129,7 +129,7 @@ long execute_kill_transaction(const std::string& packages) {
             if (colon != std::string::npos) rawPkg = rawPkg.substr(colon + 1);
 
             if (targets.count(rawPkg)) {
-                if (rawPkg == "com.example.taskmanager") continue;
+                if (rawPkg == "com.xmodern.taskmgmt") continue;
                 std::string cmd = "su -c \"am stack remove " + tid + "\"";
                 system(cmd.c_str());
                 std::string killCmd = "su -c \"am force-stop " + rawPkg + "\"";
@@ -139,7 +139,7 @@ long execute_kill_transaction(const std::string& packages) {
     }
 
     for (const auto& t : targets) {
-        if (t == "com.example.taskmanager") continue;
+        if (t == "com.xmodern.taskmgmt") continue;
         std::string killCmd = "su -c \"am force-stop " + t + "\"";
         system(killCmd.c_str());
     }

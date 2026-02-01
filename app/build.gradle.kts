@@ -4,16 +4,16 @@ plugins {
 }
 
 android {
-    namespace = "com.example.taskmanager"
+    namespace = "com.xmodern.taskmgmt"
     compileSdk = 34
     ndkVersion = "26.1.10909125"
 
     defaultConfig {
-        applicationId = "com.example.taskmanager"
+        applicationId = "com.xmodern.taskmgmt"
         minSdk = 24
         targetSdk = 34
-        versionCode = 45
-        versionName = "1.7.37"
+        versionCode = 46
+        versionName = "1.7.38"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

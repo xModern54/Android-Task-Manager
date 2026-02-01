@@ -5,7 +5,7 @@ echo "Building and Installing TaskManager (Release)..."
 if [ $? -eq 0 ]; then
     echo "Launch..."
     adb install -r app/build/outputs/apk/release/app-release.apk
-    adb shell am start -n com.example.taskmanager/.MainActivity
+    adb shell am start -n com.xmodern.taskmgmt/.MainActivity
 else
     echo "Build failed."
 fi
