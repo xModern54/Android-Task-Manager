@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xmodern.taskmgmt.ui.screens.performance.PerformanceScreen
 import com.xmodern.taskmgmt.ui.screens.performance.PerformanceSampleRepository
 import com.xmodern.taskmgmt.ui.screens.performance.PerformanceViewModel
+import com.xmodern.taskmgmt.ui.theme.TaskManagerTheme
 
 class PerformanceActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,7 +29,9 @@ class PerformanceActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            PerformanceRoot(onBack = { finish() })
+            TaskManagerTheme {
+                PerformanceRoot(onBack = { finish() })
+            }
         }
     }
 }

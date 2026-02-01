@@ -1,6 +1,8 @@
 package com.xmodern.taskmgmt
 
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -9,7 +11,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +23,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
 import com.xmodern.taskmgmt.ui.screens.processdetail.ProcessDetailScreen
 import com.xmodern.taskmgmt.ui.screens.processlist.KillReviewScreen
@@ -72,6 +79,7 @@ class MainActivity : ComponentActivity() {
             }
 
             TaskManagerTheme {
+                LogDynamicColorsIfChanged()
                 when (rootState) {
                     RootState.CHECKING -> {
                         Box(
@@ -132,6 +140,27 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LogDynamicColorsIfChanged() {
+    val context = LocalContext.current
+    val primary = MaterialTheme.colorScheme.primary.toArgb()
+    val accent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        runCatching { context.getColor(android.R.color.system_accent1_500) }.getOrNull()
+    } else {
+        null
+    }
+    val last = remember { mutableStateOf<Pair<Int, Int?>?>(null) }
+    SideEffect {
+        val current = Pair(primary, accent)
+        if (last.value != current) {
+            val primaryHex = "0x" + primary.toUInt().toString(16)
+            val accentHex = accent?.let { "0x" + it.toUInt().toString(16) } ?: "null"
+            Log.d("TaskManager", "DynamicColor primary=$primaryHex system_accent1_500=$accentHex")
+            last.value = current
         }
     }
 }
