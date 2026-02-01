@@ -496,9 +496,13 @@ std::string get_gpu_snapshot_json() {
 
     VulkanMemorySnapshot mem = get_vulkan_memory_snapshot(error);
     const VulkanContext& ctx = get_vulkan_context();
-    std::string gpuName = get_gpu_name_kgsl();
-    if (gpuName.empty() && ctx.supported) {
-        gpuName = ctx.properties.deviceName;
+    std::string gpuName;
+    if (ctx.supported) {
+        std::string vkName = ctx.properties.deviceName;
+        if (!vkName.empty()) gpuName = vkName;
+    }
+    if (gpuName.empty()) {
+        gpuName = get_gpu_name_kgsl();
     }
 
     std::stringstream driverHex;
