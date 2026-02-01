@@ -425,4 +425,13 @@ class RootConnectionManager(private val context: Context) {
         }
     }
 
+    fun getMemorySnapshotJson(): String? {
+        return try {
+            rootService?.memorySnapshotJson
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error getting memory snapshot", e)
+            null
+        }
+    }
+
 }

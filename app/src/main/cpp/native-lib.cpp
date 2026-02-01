@@ -12,6 +12,7 @@
 #include "system_stats.h"
 #include "cpu_stats.h"
 #include "gpu_stats.h"
+#include "memory_stats.h"
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_example_taskmanager_service_NativeBridge_getProcessList(
@@ -211,5 +212,13 @@ Java_com_example_taskmanager_service_NativeBridge_getGpuSnapshotJson(
         JNIEnv* env,
         jobject /* this */) {
     std::string json = get_gpu_snapshot_json();
+    return env->NewStringUTF(json.c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_example_taskmanager_service_NativeBridge_getMemorySnapshotJson(
+        JNIEnv* env,
+        jobject /* this */) {
+    std::string json = get_memory_snapshot_json();
     return env->NewStringUTF(json.c_str());
 }

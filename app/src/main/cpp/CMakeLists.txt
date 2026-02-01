@@ -12,7 +12,8 @@ add_library(
         process_scan.cpp
         safe_kill.cpp
         cpu_stats.cpp
-        gpu_stats.cpp)
+        gpu_stats.cpp
+        memory_stats.cpp)
 
 find_library(
         log-lib

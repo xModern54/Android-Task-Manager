@@ -49,6 +49,17 @@ data class GpuSnapshot(
     val error: String
 )
 
+data class MemorySnapshot(
+    val totalBytes: Long,
+    val usedBytes: Long,
+    val availableBytes: Long,
+    val cachedBytes: Long,
+    val compressedBytes: Long,
+    val committedUsedBytes: Long,
+    val committedLimitBytes: Long,
+    val timestampMs: Long
+)
+
 class PerformanceViewModel(application: Application) : AndroidViewModel(application) {
     private val rootManager = RootConnectionManager(application)
     private var tempLogCounter = 0
@@ -64,6 +75,12 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _gpuSeries = MutableStateFlow<List<Float>>(emptyList())
     val gpuSeries: StateFlow<List<Float>> = _gpuSeries.asStateFlow()
+
+    private val _memorySnapshot = MutableStateFlow<MemorySnapshot?>(null)
+    val memorySnapshot: StateFlow<MemorySnapshot?> = _memorySnapshot.asStateFlow()
+
+    private val _memorySeries = MutableStateFlow<List<Float>>(emptyList())
+    val memorySeries: StateFlow<List<Float>> = _memorySeries.asStateFlow()
 
     init {
         rootManager.bind()
@@ -148,6 +165,42 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                 }
             } catch (e: Exception) {
                 Log.e("TaskManager", "GPU snapshot parse error", e)
+            }
+        }
+    }
+
+    fun refreshMemorySnapshot() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val json = rootManager.getMemorySnapshotJson() ?: return@launch
+            try {
+                val obj = JSONObject(json)
+                val snapshot = MemorySnapshot(
+                    totalBytes = obj.optLong("totalBytes", 0L),
+                    usedBytes = obj.optLong("usedBytes", 0L),
+                    availableBytes = obj.optLong("availableBytes", 0L),
+                    cachedBytes = obj.optLong("cachedBytes", 0L),
+                    compressedBytes = obj.optLong("compressedBytes", 0L),
+                    committedUsedBytes = obj.optLong("committedUsedBytes", 0L),
+                    committedLimitBytes = obj.optLong("committedLimitBytes", 0L),
+                    timestampMs = obj.optLong("timestampMs", 0L)
+                )
+                _memorySnapshot.value = snapshot
+                val percent = if (snapshot.totalBytes > 0) {
+                    (snapshot.usedBytes.toDouble() / snapshot.totalBytes.toDouble()) * 100.0
+                } else {
+                    0.0
+                }
+                val clamped = percent.coerceIn(0.0, 100.0).toFloat()
+                val current = _memorySeries.value
+                val updated = (current + clamped).takeLast(60)
+                _memorySeries.value = if (updated.size < 60) {
+                    val pad = List(60 - updated.size) { clamped }
+                    pad + updated
+                } else {
+                    updated
+                }
+            } catch (e: Exception) {
+                Log.e("TaskManager", "Memory snapshot parse error", e)
             }
         }
     }

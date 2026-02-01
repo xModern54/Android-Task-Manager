@@ -61,8 +61,11 @@ fun PerformanceScreen(
     cpuSeries: List<Float>,
     gpuSnapshot: GpuSnapshot?,
     gpuSeries: List<Float>,
+    memorySnapshot: MemorySnapshot?,
+    memorySeries: List<Float>,
     onCpuPoll: () -> Unit,
-    onGpuPoll: () -> Unit
+    onGpuPoll: () -> Unit,
+    onMemoryPoll: () -> Unit
 ) {
     var selectedId by remember { mutableStateOf("memory") }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -79,6 +82,11 @@ fun PerformanceScreen(
                     onGpuPoll()
                     delay(1000)
                 }
+            } else if (selectedId == "memory") {
+                while (isActive) {
+                    onMemoryPoll()
+                    delay(500)
+                }
             }
         }
     }
@@ -88,6 +96,8 @@ fun PerformanceScreen(
             cpuCategoryFromSnapshot(category, cpuSnapshot, cpuSeries)
         } else if (category.id == "gpu" && gpuSnapshot != null) {
             gpuCategoryFromSnapshot(category, gpuSnapshot, gpuSeries)
+        } else if (category.id == "memory" && memorySnapshot != null) {
+            memoryCategoryFromSnapshot(category, memorySnapshot, memorySeries)
         } else {
             category
         }
@@ -197,15 +207,18 @@ private fun MainPanel(category: PerformanceCategory, modifier: Modifier = Modifi
         ChartBlock(category = category)
         Spacer(modifier = Modifier.height(16.dp))
 
-        category.compositionLabel?.let {
-            Text(
-                text = it,
-                color = SecondaryText,
-                style = MaterialTheme.typography.labelMedium
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            CompositionBar(category = category)
-            Spacer(modifier = Modifier.height(16.dp))
+        // TODO: restore Memory composition block later
+        if (false) {
+            category.compositionLabel?.let {
+                Text(
+                    text = it,
+                    color = SecondaryText,
+                    style = MaterialTheme.typography.labelMedium
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                CompositionBar(category = category)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
 
         StatsBlock(category = category)
@@ -675,6 +688,56 @@ private fun gpuCategoryFromSnapshot(
     )
 }
 
+private fun memoryCategoryFromSnapshot(
+    base: PerformanceCategory,
+    snapshot: MemorySnapshot,
+    series: List<Float>
+): PerformanceCategory {
+    val totalGb = formatBytesGb(snapshot.totalBytes)
+    val usedGb = formatBytesGb(snapshot.usedBytes)
+    val percent = if (snapshot.totalBytes > 0) {
+        (snapshot.usedBytes.toDouble() / snapshot.totalBytes.toDouble()) * 100.0
+    } else {
+        0.0
+    }
+    val summary = if (snapshot.totalBytes > 0) {
+        val pct = String.format("%.0f%%", percent)
+        "${usedGb}/${totalGb} ($pct)"
+    } else {
+        base.summaryText
+    }
+
+    val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+
+    val compressedText = if (snapshot.compressedBytes > 0) {
+        "${formatBytesGb(snapshot.usedBytes)} (${formatBytesMb(snapshot.compressedBytes)})"
+    } else {
+        "${formatBytesGb(snapshot.usedBytes)} (0 MB)"
+    }
+
+    val committedText = if (snapshot.committedUsedBytes > 0 && snapshot.committedLimitBytes > 0) {
+        "${formatBytesGb(snapshot.committedUsedBytes)}/${formatBytesGb(snapshot.committedLimitBytes)}"
+    } else {
+        "—"
+    }
+
+    return base.copy(
+        summaryText = summary,
+        headerRightPrimary = totalGb,
+        headerRightSecondary = formatBytesGb(snapshot.availableBytes),
+        timeSeries = chartSeries,
+        leftStats = listOf(
+            StatItem("In use (Compressed)", compressedText),
+            StatItem("Committed", committedText),
+            StatItem("Cached", formatBytesGb(snapshot.cachedBytes))
+        ),
+        rightStats = listOf(
+            StatItem("Available", formatBytesGb(snapshot.availableBytes))
+        ),
+        metaStats = emptyList()
+    )
+}
+
 private fun formatPercent(value: Double): String {
     return if (value.isNaN()) {
         "—"
@@ -708,6 +771,12 @@ private fun formatBytesGb(bytes: Long): String {
     if (bytes <= 0) return "—"
     val gb = bytes / 1_073_741_824.0
     return String.format("%.1f GB", gb)
+}
+
+private fun formatBytesMb(bytes: Long): String {
+    if (bytes <= 0) return "0 MB"
+    val mb = bytes / 1_048_576.0
+    return String.format("%.0f MB", mb)
 }
 
 private fun formatDriverDate(iso: String): String {

@@ -212,6 +212,10 @@ class RootBackendService : RootService() {
                                                                 return NativeBridge.getGpuSnapshotJson()
                                                             }
 
+                                                            override fun getMemorySnapshotJson(): String {
+                                                                return NativeBridge.getMemorySnapshotJson()
+                                                            }
+
 
 
             
