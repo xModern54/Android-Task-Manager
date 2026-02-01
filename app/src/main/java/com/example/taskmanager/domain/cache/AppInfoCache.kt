@@ -67,11 +67,12 @@ class AppInfoCache(private val context: Context) {
                     AppUiState(label, icon, isSystem = isSystemApp)
                 } else {
                     // Likely a system binary or kernel thread
+                    // Use processName as label instead of generic "System Process"
                     AppUiState(processName, defaultIcon, isSystem = true)
                 }
             } catch (e: PackageManager.NameNotFoundException) {
                 Log.w("AppInfoCache", "NameNotFound: $processName (Base: ${processName.split(":")[0]})")
-                // Name looked like a package but wasn't found (e.g. split apks or native process)
+                // Use processName as label
                 AppUiState(processName, defaultIcon, isSystem = true)
             } catch (e: Exception) {
                 Log.e("AppInfoCache", "Error resolving $processName", e)

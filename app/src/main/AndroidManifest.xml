@@ -21,6 +21,11 @@
                         <category android:name="android.intent.category.LAUNCHER" />
                     </intent-filter>
                 </activity>
+
+                <activity
+                    android:name=".PerformanceActivity"
+                    android:exported="false"
+                    android:theme="@style/Theme.TaskManager" />
         
                         <service
                             android:name=".service.RootBackendService"

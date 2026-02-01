@@ -9,5 +9,6 @@ data class ProcessUiModel(
     val icon: Drawable?,
     val isSystem: Boolean,
     val cpuUsage: Double,
-    val ramUsage: Long
+    val ramUsage: Long,
+    val nice: Int = 0
 )

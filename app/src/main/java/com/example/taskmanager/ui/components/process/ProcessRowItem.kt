@@ -87,17 +87,18 @@ fun ProcessRowItem(process: ProcessUiModel) {
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = TextWhite,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = if (process.isSystem) "System Process" else process.rawName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextGrey,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = process.rawName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextGrey,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                        
             }
 
             // --- RIGHT: METRICS (Fixed Widths) ---

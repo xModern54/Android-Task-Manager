@@ -20,10 +20,273 @@ class RootBackendService : RootService() {
                 return NativeBridge.hello()
             }
 
-            override fun getProcessList(): String {
-                Log.d("TaskManager", "NativeBridge.getProcessList called")
-                return NativeBridge.getProcessList()
+                        override fun getProcessList(): String {
+
+                            Log.d("TaskManager", "NativeBridge.getProcessList called")
+
+                            return NativeBridge.getProcessList()
+
+                        }
+
+            
+
+                                    override fun getProcessExtendedInfo(pid: Int): String {
+                return NativeBridge.getProcessExtendedInfo(pid)
             }
-        }
-    }
-}
+
+            override fun getProcessDeepSnapshot(pid: Int): String {
+                return NativeBridge.getProcessDeepSnapshot(pid)
+            }
+
+            override fun sendSignal(pid: Int, signal: Int): Boolean {
+
+            
+
+                        
+
+            
+
+                                                    return NativeBridge.sendSignal(pid, signal)
+
+            
+
+                        
+
+            
+
+                                                }
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                override fun getKillCandidates(): String {
+
+            
+
+                        
+
+            
+
+                                                    return NativeBridge.getKillCandidates()
+
+            
+
+                        
+
+            
+
+                                                }
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                            override fun executeKillTransaction(packages: String): Long {
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                                return NativeBridge.executeKillTransaction(packages)
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                            }
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                            override fun getFreeRam(): Long {
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                                return NativeBridge.getFreeRam()
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                            }
+
+                                                            override fun getCpuSnapshotJson(): String {
+                                                                return NativeBridge.getCpuSnapshotJson()
+                                                            }
+
+                                                            override fun getVulkanInfoJson(): String {
+                                                                return NativeBridge.getVulkanInfoJson()
+                                                            }
+
+                                                            override fun getGpuSnapshotJson(): String {
+                                                                return NativeBridge.getGpuSnapshotJson()
+                                                            }
+
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                        }
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                    }
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                }
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            
+
+                                                
+
+            
+
+                        
+
+            
+
+                                    
+
+            
+
+                        
+
+            

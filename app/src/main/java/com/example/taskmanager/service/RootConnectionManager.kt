@@ -45,13 +45,382 @@ class RootConnectionManager(private val context: Context) {
         }
     }
 
-    fun getProcessList(): String? {
+        fun getProcessList(): String? {
+
+            return try {
+
+                val result = rootService?.processList
+
+                // Log.d("TaskManager", "Fetched Data Length: ${result?.length ?: "null"}") // Too spammy
+
+                result
+
+            } catch (e: Exception) {
+
+                Log.e("TaskManager", "Error fetching process list", e)
+
+                null
+
+            }
+
+        }
+
+    
+
+    fun getProcessExtendedInfo(pid: Int): String? {
         return try {
-            val result = rootService?.processList
-            Log.d("TaskManager", "Fetched Data Length: ${result?.length ?: "null"}")
-            result
+            rootService?.getProcessExtendedInfo(pid)
         } catch (e: Exception) {
-            Log.e("TaskManager", "Error fetching process list", e)
+            Log.e("TaskManager", "Error fetching extended info", e)
+            null
+        }
+    }
+
+    fun getProcessDeepSnapshot(pid: Int): String? {
+        return try {
+            rootService?.getProcessDeepSnapshot(pid)
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error fetching deep snapshot", e)
+            null
+        }
+    }
+
+    fun sendSignal(pid: Int, signal: Int): Boolean {
+
+    
+
+        
+
+    
+
+                    return try {
+
+    
+
+        
+
+    
+
+                        rootService?.sendSignal(pid, signal) ?: false
+
+    
+
+        
+
+    
+
+                    } catch (e: Exception) {
+
+    
+
+        
+
+    
+
+                        Log.e("TaskManager", "Error sending signal", e)
+
+    
+
+        
+
+    
+
+                        false
+
+    
+
+        
+
+    
+
+                    }
+
+    
+
+        
+
+    
+
+                }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                fun getKillCandidates(): List<String> {
+
+    
+
+        
+
+    
+
+                    return try {
+
+    
+
+        
+
+    
+
+                        rootService?.killCandidates?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+
+    
+
+        
+
+    
+
+                    } catch (e: Exception) {
+
+    
+
+        
+
+    
+
+                        Log.e("TaskManager", "Error getting candidates", e)
+
+    
+
+        
+
+    
+
+                        emptyList()
+
+    
+
+        
+
+    
+
+                    }
+
+    
+
+        
+
+    
+
+                }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    fun executeKillTransaction(packages: List<String>): Long {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                        return try {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                            val payload = packages.joinToString("|")
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                            rootService?.executeKillTransaction(payload) ?: 0L
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                        } catch (e: Exception) {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                            Log.e("TaskManager", "Error executing transaction", e)
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                            0L
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                        }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+    fun getFreeRam(): Long {
+        return try {
+            rootService?.freeRam ?: 0L
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error getting free RAM", e)
+            0L
+        }
+    }
+
+    fun getCpuSnapshotJson(): String? {
+        return try {
+            rootService?.cpuSnapshotJson
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error getting CPU snapshot", e)
+            null
+        }
+    }
+
+    fun getVulkanInfoJson(): String? {
+        return try {
+            rootService?.vulkanInfoJson
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error getting Vulkan info", e)
+            null
+        }
+    }
+
+    fun getGpuSnapshotJson(): String? {
+        return try {
+            rootService?.gpuSnapshotJson
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error getting GPU snapshot", e)
             null
         }
     }

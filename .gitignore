@@ -3,6 +3,8 @@
 *.aar
 *.ap_
 *.aab
+TaskManager-Release/
+TaskManager-Release.apk
 
 # Files for the ART/Dalvik VM
 *.dex
