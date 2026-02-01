@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <dirent.h>
+#include <fstream>
 #include <cmath>
 #include <limits>
 
@@ -35,6 +36,7 @@ struct VulkanContext {
 
     uint32_t instanceVersion = 0;
     VkPhysicalDeviceProperties properties{};
+    std::string memoryProps2Fn;
 };
 
 static std::mutex g_vulkan_mutex;
@@ -213,6 +215,14 @@ static bool init_vulkan_context_internal(VulkanContext& ctx, std::string& errOut
     ctx.instanceVersion = instanceVersionNum;
     ctx.properties = props;
     ctx.hasMemoryBudget = hasBudget && (getMemoryProperties2 != nullptr);
+    if (getMemoryProperties2) {
+        ctx.memoryProps2Fn = "vkGetPhysicalDeviceMemoryProperties2";
+        if (gpa(instance, "vkGetPhysicalDeviceMemoryProperties2") == nullptr) {
+            ctx.memoryProps2Fn = "vkGetPhysicalDeviceMemoryProperties2KHR";
+        }
+    } else {
+        ctx.memoryProps2Fn = "";
+    }
     ctx.supported = true;
     return true;
 }
@@ -543,4 +553,99 @@ std::string get_gpu_snapshot_json() {
     ss << "\"error\":\"" << escape_json(error) << "\"";
     ss << "}";
     return ss.str();
+}
+
+static std::string read_file_snippet(const std::string& path, int maxLines, size_t maxBytes) {
+    std::ifstream file(path);
+    if (!file.is_open()) return "";
+    std::string line;
+    std::stringstream ss;
+    size_t bytes = 0;
+    int lines = 0;
+    while (std::getline(file, line)) {
+        ss << line << "\n";
+        bytes += line.size() + 1;
+        lines++;
+        if (lines >= maxLines || bytes >= maxBytes) break;
+    }
+    return ss.str();
+}
+
+static void log_diag(const std::string& msg) {
+    __android_log_print(ANDROID_LOG_DEBUG, "HardwareAccess/GpuMemDiag", "%s", msg.c_str());
+}
+
+void run_gpu_memory_diagnostics() {
+    log_diag("=== GPU memory diagnostics start ===");
+
+    struct PathCheck {
+        const char* label;
+        const char* path;
+        int lines;
+        size_t bytes;
+    };
+
+    const PathCheck checks[] = {
+            {"kgsl/memstat", "/sys/class/kgsl/kgsl-3d0/memstat", 2, 512},
+            {"kgsl/clients", "/sys/class/kgsl/kgsl-3d0/clients", 2, 512},
+            {"kgsl/stat", "/sys/class/kgsl/kgsl-3d0/stat", 2, 512},
+            {"debugfs/dma_buf/bufinfo", "/sys/kernel/debug/dma_buf/bufinfo", 5, 2048}
+    };
+
+    for (const auto& check : checks) {
+        std::string snippet = read_file_snippet(check.path, check.lines, check.bytes);
+        if (snippet.empty()) {
+            log_diag(std::string(check.label) + " missing/unreadable: " + check.path);
+        } else {
+            log_diag(std::string(check.label) + " snippet: " + snippet);
+        }
+    }
+
+    const VulkanContext& ctx = get_vulkan_context();
+    if (!ctx.supported) {
+        log_diag(std::string("Vulkan unsupported: ") + ctx.error);
+        log_diag("=== GPU memory diagnostics end ===");
+        return;
+    }
+
+    log_diag(std::string("Vulkan supported. VK_EXT_memory_budget=") + (ctx.hasMemoryBudget ? "true" : "false"));
+    log_diag(std::string("MemoryProperties2 fn: ") + (ctx.memoryProps2Fn.empty() ? "none" : ctx.memoryProps2Fn));
+
+    VkPhysicalDeviceMemoryProperties memProps{};
+    ctx.getMemoryProperties(ctx.physicalDevice, &memProps);
+    std::stringstream heapInfo;
+    heapInfo << "Heap count=" << memProps.memoryHeapCount;
+    log_diag(heapInfo.str());
+
+    std::vector<uint64_t> heapUsage(memProps.memoryHeapCount, 0);
+    std::vector<uint64_t> heapBudget(memProps.memoryHeapCount, 0);
+
+    if (ctx.hasMemoryBudget && ctx.getMemoryProperties2) {
+        VkPhysicalDeviceMemoryBudgetPropertiesEXT budget{};
+        budget.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT;
+        VkPhysicalDeviceMemoryProperties2 props2{};
+        props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+        props2.pNext = &budget;
+        ctx.getMemoryProperties2(ctx.physicalDevice, &props2);
+        for (uint32_t i = 0; i < props2.memoryProperties.memoryHeapCount; ++i) {
+            heapUsage[i] = budget.heapUsage[i];
+            heapBudget[i] = budget.heapBudget[i];
+        }
+    }
+
+    for (uint32_t i = 0; i < memProps.memoryHeapCount; ++i) {
+        bool deviceLocal = (memProps.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0;
+        double sizeGb = memProps.memoryHeaps[i].size / 1073741824.0;
+        double usageGb = heapUsage[i] / 1073741824.0;
+        double budgetGb = heapBudget[i] / 1073741824.0;
+        std::stringstream ss;
+        ss << "heap[" << i << "] "
+           << (deviceLocal ? "DEVICE_LOCAL" : "SHARED")
+           << " sizeGB=" << std::fixed << std::setprecision(2) << sizeGb
+           << " usageGB=" << std::fixed << std::setprecision(2) << usageGb
+           << " budgetGB=" << std::fixed << std::setprecision(2) << budgetGb;
+        log_diag(ss.str());
+    }
+
+    log_diag("=== GPU memory diagnostics end ===");
 }

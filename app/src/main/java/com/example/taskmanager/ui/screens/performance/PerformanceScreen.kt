@@ -62,7 +62,8 @@ fun PerformanceScreen(
     gpuSnapshot: GpuSnapshot?,
     gpuSeries: List<Float>,
     onCpuPoll: () -> Unit,
-    onGpuPoll: () -> Unit
+    onGpuPoll: () -> Unit,
+    onGpuDiagnostics: () -> Unit
 ) {
     var selectedId by remember { mutableStateOf("memory") }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -75,6 +76,7 @@ fun PerformanceScreen(
                     delay(1000)
                 }
             } else if (selectedId == "gpu") {
+                onGpuDiagnostics()
                 while (isActive) {
                     onGpuPoll()
                     delay(1000)
