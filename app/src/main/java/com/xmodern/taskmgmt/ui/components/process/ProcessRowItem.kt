@@ -34,12 +34,19 @@ import com.xmodern.taskmgmt.ui.theme.TextGrey
 import com.xmodern.taskmgmt.ui.theme.TextWhite
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import java.util.Locale
+import kotlin.math.pow
 
-// Windows-style Deep Red
-private val HeatmapBaseColor = Color(0xFFD32F2F)
-
-private fun calculateAlpha(value: Double, max: Double): Float {
+private fun calculateUsageFraction(value: Double, max: Double): Float {
     return (value / max).toFloat().coerceIn(0.0f, 1.0f)
+}
+
+private fun heatmapAlpha(usage: Float): Float {
+    val minAlpha = 0.1f
+    val maxAlpha = 0.55f
+    val gamma = 0.8f
+    val clamped = usage.coerceIn(0.0f, 1.0f)
+    val curved = clamped.toDouble().pow(gamma.toDouble()).toFloat()
+    return (minAlpha + (maxAlpha - minAlpha) * curved).coerceIn(minAlpha, maxAlpha)
 }
 
 @Composable
@@ -104,12 +111,14 @@ fun ProcessRowItem(process: ProcessUiModel) {
             // --- RIGHT: METRICS (Fixed Widths) ---
             
             // 1. CPU Column
-            val cpuAlpha = calculateAlpha(process.cpuUsage, 100.0)
+            val cpuUsage = calculateUsageFraction(process.cpuUsage, 100.0)
+            val cpuAlpha = heatmapAlpha(cpuUsage)
+            val baseHeat = MaterialTheme.colorScheme.primary
             Box(
                 modifier = Modifier
                     .width(70.dp)
                     .fillMaxHeight() // Fills the row top-to-bottom
-                    .background(HeatmapBaseColor.copy(alpha = cpuAlpha)),
+                    .background(baseHeat.copy(alpha = cpuAlpha)),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Text(
@@ -124,12 +133,13 @@ fun ProcessRowItem(process: ProcessUiModel) {
 
             // 2. RAM Column
             // Visual cap: 1 GB (1073741824 bytes)
-            val ramAlpha = calculateAlpha(process.ramUsage.toDouble(), 1073741824.0) 
+            val ramUsage = calculateUsageFraction(process.ramUsage.toDouble(), 1073741824.0)
+            val ramAlpha = heatmapAlpha(ramUsage)
             Box(
                 modifier = Modifier
                     .width(90.dp)
                     .fillMaxHeight()
-                    .background(HeatmapBaseColor.copy(alpha = ramAlpha)),
+                    .background(baseHeat.copy(alpha = ramAlpha)),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Text(

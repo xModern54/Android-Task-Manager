@@ -71,9 +71,7 @@ import com.xmodern.taskmgmt.ui.theme.TextGrey
 import com.xmodern.taskmgmt.ui.theme.TextWhite
 import java.util.Locale
 import android.content.Intent
-
-// Reusing Heatmap color
-private val HeatmapColor = Color(0xFFD32F2F)
+import kotlin.math.pow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,6 +257,7 @@ fun ProcessListHeader(
     totalRamUsed: Long,
     totalRamSize: Long
 ) {
+    val baseHeat = MaterialTheme.colorScheme.primary
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -281,12 +280,13 @@ fun ProcessListHeader(
             )
 
             // CPU Header Cell
-            val cpuAlpha = (totalCpu / 100.0).toFloat().coerceIn(0.0f, 1.0f)
+            val cpuUsage = (totalCpu / 100.0).toFloat().coerceIn(0.0f, 1.0f)
+            val cpuAlpha = heatmapAlpha(cpuUsage)
             Box(
                 modifier = Modifier
                     .width(70.dp)
                     .fillMaxHeight()
-                    .background(HeatmapColor.copy(alpha = cpuAlpha)),
+                    .background(baseHeat.copy(alpha = cpuAlpha)),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(end = 8.dp)) {
@@ -306,14 +306,15 @@ fun ProcessListHeader(
             }
 
             // RAM Header Cell
-            val ramAlpha = (totalRamUsed.toDouble() / totalRamSize.toDouble()).toFloat().coerceIn(0.0f, 1.0f)
+            val ramUsage = (totalRamUsed.toDouble() / totalRamSize.toDouble()).toFloat().coerceIn(0.0f, 1.0f)
+            val ramAlpha = heatmapAlpha(ramUsage)
             val ramGb = totalRamUsed / (1024.0 * 1024.0 * 1024.0)
             
             Box(
                 modifier = Modifier
                     .width(90.dp) // Matches RowItem
                     .fillMaxHeight()
-                    .background(HeatmapColor.copy(alpha = ramAlpha)),
+                    .background(baseHeat.copy(alpha = ramAlpha)),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(end = 8.dp)) {
@@ -334,4 +335,13 @@ fun ProcessListHeader(
         }
         Divider(color = DividerGrey, thickness = 1.dp)
     }
+}
+
+private fun heatmapAlpha(usage: Float): Float {
+    val minAlpha = 0.1f
+    val maxAlpha = 0.55f
+    val gamma = 0.8f
+    val clamped = usage.coerceIn(0.0f, 1.0f)
+    val curved = clamped.toDouble().pow(gamma.toDouble()).toFloat()
+    return (minAlpha + (maxAlpha - minAlpha) * curved).coerceIn(minAlpha, maxAlpha)
 }
