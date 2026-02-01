@@ -69,8 +69,7 @@ private fun PerformanceRoot(onBack: () -> Unit) {
             gpuSnapshot = gpuSnapshot,
             gpuSeries = gpuSeries,
             onCpuPoll = { viewModel.refreshCpuSnapshot() },
-            onGpuPoll = { viewModel.refreshGpuSnapshot() },
-            onGpuDiagnostics = { viewModel.runGpuMemoryDiagnosticsOnce() }
+            onGpuPoll = { viewModel.refreshGpuSnapshot() }
         )
     }
 }

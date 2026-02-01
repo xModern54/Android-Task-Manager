@@ -35,8 +35,6 @@ object NativeBridge {
     external fun getVulkanInfoJson(): String
 
     external fun getGpuSnapshotJson(): String
-
-    external fun runGpuMemoryDiagnostics()
 }
 
                 

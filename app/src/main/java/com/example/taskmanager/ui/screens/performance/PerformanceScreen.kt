@@ -62,8 +62,7 @@ fun PerformanceScreen(
     gpuSnapshot: GpuSnapshot?,
     gpuSeries: List<Float>,
     onCpuPoll: () -> Unit,
-    onGpuPoll: () -> Unit,
-    onGpuDiagnostics: () -> Unit
+    onGpuPoll: () -> Unit
 ) {
     var selectedId by remember { mutableStateOf("memory") }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -76,7 +75,6 @@ fun PerformanceScreen(
                     delay(1000)
                 }
             } else if (selectedId == "gpu") {
-                onGpuDiagnostics()
                 while (isActive) {
                     onGpuPoll()
                     delay(1000)
@@ -655,18 +653,7 @@ private fun gpuCategoryFromSnapshot(
 
     val gpuSeries = if (series.isEmpty()) List(60) { 0f } else series
 
-    val dedicated = formatGpuMemory(
-        snapshot.dedicatedUsedBytes,
-        snapshot.dedicatedBudgetBytes,
-        snapshot.dedicatedTotalBytes,
-        snapshot.hasMemoryBudget
-    )
-    val shared = formatGpuMemory(
-        snapshot.sharedUsedBytes,
-        snapshot.sharedBudgetBytes,
-        snapshot.sharedTotalBytes,
-        snapshot.hasMemoryBudget
-    )
+    val totalMemory = formatBytesGb(snapshot.dedicatedTotalBytes)
     val vulkanVersion = if (snapshot.vulkanApiVersion.isNotBlank()) snapshot.vulkanApiVersion else "—"
     val driver = if (snapshot.vulkanDriverVersion.isNotBlank()) snapshot.vulkanDriverVersion else "—"
 
@@ -677,10 +664,9 @@ private fun gpuCategoryFromSnapshot(
         leftStats = listOf(
             StatItem("3D", utilText),
             StatItem("Temperature", tempText),
-            StatItem("Dedicated GPU memory", dedicated)
+            StatItem("GPU memory", totalMemory)
         ),
         rightStats = listOf(
-            StatItem("Shared GPU memory", shared),
             StatItem("Vulkan", vulkanVersion),
             StatItem("Driver", driver)
         )
@@ -720,19 +706,4 @@ private fun formatBytesGb(bytes: Long): String {
     if (bytes <= 0) return "—"
     val gb = bytes / 1_073_741_824.0
     return String.format("%.1f GB", gb)
-}
-
-private fun formatGpuMemory(
-    usedBytes: Long,
-    budgetBytes: Long,
-    totalBytes: Long,
-    hasBudget: Boolean
-): String {
-    return if (hasBudget && budgetBytes > 0) {
-        "${formatBytesGb(usedBytes)} / ${formatBytesGb(budgetBytes)}"
-    } else if (totalBytes > 0) {
-        "— / ${formatBytesGb(totalBytes)}"
-    } else {
-        "—"
-    }
 }

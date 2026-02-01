@@ -23,8 +23,6 @@ interface IRootService {
     String getVulkanInfoJson();
 
     String getGpuSnapshotJson();
-
-    void runGpuMemoryDiagnostics();
 }
 
         

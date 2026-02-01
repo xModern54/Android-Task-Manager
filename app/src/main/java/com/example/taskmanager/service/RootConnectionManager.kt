@@ -425,11 +425,4 @@ class RootConnectionManager(private val context: Context) {
         }
     }
 
-    fun runGpuMemoryDiagnostics() {
-        try {
-            rootService?.runGpuMemoryDiagnostics()
-        } catch (e: Exception) {
-            Log.e("TaskManager", "Error running GPU memory diagnostics", e)
-        }
-    }
 }

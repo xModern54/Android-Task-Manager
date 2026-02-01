@@ -213,10 +213,3 @@ Java_com_example_taskmanager_service_NativeBridge_getGpuSnapshotJson(
     std::string json = get_gpu_snapshot_json();
     return env->NewStringUTF(json.c_str());
 }
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_example_taskmanager_service_NativeBridge_runGpuMemoryDiagnostics(
-        JNIEnv* /* env */,
-        jobject /* this */) {
-    run_gpu_memory_diagnostics();
-}

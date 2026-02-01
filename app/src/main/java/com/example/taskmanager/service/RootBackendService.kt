@@ -212,9 +212,6 @@ class RootBackendService : RootService() {
                                                                 return NativeBridge.getGpuSnapshotJson()
                                                             }
 
-                                                            override fun runGpuMemoryDiagnostics() {
-                                                                NativeBridge.runGpuMemoryDiagnostics()
-                                                            }
 
 
             

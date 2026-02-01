@@ -51,7 +51,6 @@ data class GpuSnapshot(
 class PerformanceViewModel(application: Application) : AndroidViewModel(application) {
     private val rootManager = RootConnectionManager(application)
     private var tempLogCounter = 0
-    private var gpuDiagnosticsRan = false
 
     private val _cpuSnapshot = MutableStateFlow<CpuSnapshot?>(null)
     val cpuSnapshot: StateFlow<CpuSnapshot?> = _cpuSnapshot.asStateFlow()
@@ -151,13 +150,6 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun runGpuMemoryDiagnosticsOnce() {
-        if (gpuDiagnosticsRan) return
-        gpuDiagnosticsRan = true
-        viewModelScope.launch(Dispatchers.IO) {
-            rootManager.runGpuMemoryDiagnostics()
-        }
-    }
 
     override fun onCleared() {
         super.onCleared()
