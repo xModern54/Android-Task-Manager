@@ -664,7 +664,7 @@ private fun cpuCategoryFromSnapshot(
 
     return base.copy(
         summaryText = summary,
-        hardwareName = if (snapshot.cpuName.isNotBlank()) snapshot.cpuName else "—",
+        hardwareName = if (snapshot.cpuDisplayName.isNotBlank()) snapshot.cpuDisplayName else snapshot.cpuName,
         hardwareSubtitle = subtitle,
         timeSeries = cpuSeries,
         leftStats = listOf(

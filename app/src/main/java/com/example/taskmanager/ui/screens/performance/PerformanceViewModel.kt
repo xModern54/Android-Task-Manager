@@ -8,6 +8,7 @@ import android.net.LinkAddress
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskmanager.service.RootConnectionManager
+import com.example.taskmanager.util.SocNameMapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +24,7 @@ import kotlin.math.max
 
 data class CpuSnapshot(
     val cpuName: String,
+    val cpuDisplayName: String,
     val coresPhysical: Int,
     val coresLogical: Int,
     val coreLayout: String,
@@ -181,6 +183,7 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                 val obj = JSONObject(json.toString())
                 val snapshot = CpuSnapshot(
                     cpuName = obj.optString("cpuName", "—"),
+                    cpuDisplayName = "",
                     coresPhysical = obj.optInt("coresPhysical", 0),
                     coresLogical = obj.optInt("coresLogical", 0),
                     coreLayout = obj.optString("coreLayout", ""),
@@ -197,7 +200,8 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                     handles = obj.optLong("handles", 0L),
                     uptimeSeconds = obj.optLong("uptimeSeconds", 0L)
                 )
-                _cpuSnapshot.value = snapshot
+                val friendly = SocNameMapper.resolve(getApplication(), snapshot.cpuName)
+                _cpuSnapshot.value = snapshot.copy(cpuDisplayName = friendly ?: snapshot.cpuName)
                 tempLogCounter++
                 if (tempLogCounter % 10 == 0) {
                     Log.d(
