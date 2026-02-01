@@ -27,6 +27,8 @@ interface IRootService {
     String getMemorySnapshotJson();
 
     String getDiskSnapshotJson();
+
+    String getNetSnapshotJson();
 }
 
         

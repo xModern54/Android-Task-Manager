@@ -443,4 +443,13 @@ class RootConnectionManager(private val context: Context) {
         }
     }
 
+    fun getNetSnapshotJson(): String? {
+        return try {
+            rootService?.netSnapshotJson
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error getting network snapshot", e)
+            null
+        }
+    }
+
 }

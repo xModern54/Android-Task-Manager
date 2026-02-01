@@ -220,6 +220,10 @@ class RootBackendService : RootService() {
                                                                 return NativeBridge.getDiskSnapshotJson()
                                                             }
 
+                                                            override fun getNetSnapshotJson(): String {
+                                                                return NativeBridge.getNetSnapshotJson()
+                                                            }
+
 
 
             

@@ -14,6 +14,7 @@ add_library(
         cpu_stats.cpp
         gpu_stats.cpp
         memory_stats.cpp
+        net_stats.cpp
         disk_stats.cpp)
 
 find_library(

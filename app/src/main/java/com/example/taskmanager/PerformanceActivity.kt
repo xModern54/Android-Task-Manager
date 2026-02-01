@@ -46,6 +46,8 @@ private fun PerformanceRoot(onBack: () -> Unit) {
     val memorySeries by viewModel.memorySeries.collectAsState()
     val diskSnapshot by viewModel.diskSnapshot.collectAsState()
     val diskSeries by viewModel.diskSeries.collectAsState()
+    val netSnapshot by viewModel.netSnapshot.collectAsState()
+    val netSeries by viewModel.netSeries.collectAsState()
 
     Scaffold(
         topBar = {
@@ -76,10 +78,13 @@ private fun PerformanceRoot(onBack: () -> Unit) {
             memorySeries = memorySeries,
             diskSnapshot = diskSnapshot,
             diskSeries = diskSeries,
+            netSnapshot = netSnapshot,
+            netSeries = netSeries,
             onCpuPoll = { viewModel.refreshCpuSnapshot() },
             onGpuPoll = { viewModel.refreshGpuSnapshot() },
             onMemoryPoll = { viewModel.refreshMemorySnapshot() },
-            onDiskPoll = { viewModel.refreshDiskSnapshot() }
+            onDiskPoll = { viewModel.refreshDiskSnapshot() },
+            onNetPoll = { viewModel.refreshNetSnapshot() }
         )
     }
 }

@@ -2,6 +2,7 @@ package com.example.taskmanager.ui.screens.performance
 
 import android.app.Application
 import android.util.Log
+import android.net.wifi.WifiManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskmanager.service.RootConnectionManager
@@ -11,6 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.net.Inet4Address
+import java.net.NetworkInterface
+import java.util.Collections
 
 
 data class CpuSnapshot(
@@ -76,6 +80,16 @@ data class DiskSnapshot(
     val error: String
 )
 
+data class NetSnapshot(
+    val iface: String,
+    val adapterLabel: String,
+    val ssid: String,
+    val ipv4: String,
+    val sendBps: Long,
+    val recvBps: Long,
+    val packetsTotal: Long
+)
+
 class PerformanceViewModel(application: Application) : AndroidViewModel(application) {
     private val rootManager = RootConnectionManager(application)
     private var tempLogCounter = 0
@@ -104,7 +118,19 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
     private val _diskSeries = MutableStateFlow<List<Float>>(emptyList())
     val diskSeries: StateFlow<List<Float>> = _diskSeries.asStateFlow()
 
+    private val _netSnapshot = MutableStateFlow<NetSnapshot?>(null)
+    val netSnapshot: StateFlow<NetSnapshot?> = _netSnapshot.asStateFlow()
+
+    private val _netSeries = MutableStateFlow<List<Float>>(emptyList())
+    val netSeries: StateFlow<List<Float>> = _netSeries.asStateFlow()
+
     private var lastDiskAvgResponseMs: Double? = null
+    private var lastNetIface: String? = null
+    private var lastNetRxBytes: Long = 0
+    private var lastNetTxBytes: Long = 0
+    private var lastNetRxPackets: Long = 0
+    private var lastNetTxPackets: Long = 0
+    private var lastNetTimestampMs: Long = 0
 
     init {
         rootManager.bind()
@@ -266,6 +292,99 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
             } catch (e: Exception) {
                 Log.e("TaskManager", "Disk snapshot parse error", e)
             }
+        }
+    }
+
+    fun refreshNetSnapshot() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val json = rootManager.getNetSnapshotJson() ?: return@launch
+            try {
+                val obj = JSONObject(json)
+                val iface = obj.optString("iface", "")
+                val rxBytes = obj.optLong("rxBytes", 0L)
+                val txBytes = obj.optLong("txBytes", 0L)
+                val rxPackets = obj.optLong("rxPackets", 0L)
+                val txPackets = obj.optLong("txPackets", 0L)
+                val timestampMs = obj.optLong("timestampMs", 0L)
+
+                if (iface.isNotBlank() && iface != lastNetIface) {
+                    lastNetIface = iface
+                    lastNetRxBytes = rxBytes
+                    lastNetTxBytes = txBytes
+                    lastNetRxPackets = rxPackets
+                    lastNetTxPackets = txPackets
+                    lastNetTimestampMs = timestampMs
+                }
+
+                val dtMs = (timestampMs - lastNetTimestampMs).coerceAtLeast(0L)
+                val sendBps = if (dtMs > 0) {
+                    ((txBytes - lastNetTxBytes).coerceAtLeast(0L) * 1000L) / dtMs
+                } else {
+                    0L
+                }
+                val recvBps = if (dtMs > 0) {
+                    ((rxBytes - lastNetRxBytes).coerceAtLeast(0L) * 1000L) / dtMs
+                } else {
+                    0L
+                }
+
+                lastNetRxBytes = rxBytes
+                lastNetTxBytes = txBytes
+                lastNetRxPackets = rxPackets
+                lastNetTxPackets = txPackets
+                lastNetTimestampMs = timestampMs
+
+                val adapterLabel = if (iface.startsWith("wlan")) "Wi‑Fi" else "Ethernet"
+                val ssid = if (iface.startsWith("wlan")) getWifiSsid() else "—"
+                val ipv4 = if (iface.isNotBlank()) getIpv4Address(iface) else "—"
+
+                val snapshot = NetSnapshot(
+                    iface = iface,
+                    adapterLabel = adapterLabel,
+                    ssid = ssid,
+                    ipv4 = ipv4,
+                    sendBps = sendBps,
+                    recvBps = recvBps,
+                    packetsTotal = rxPackets + txPackets
+                )
+                _netSnapshot.value = snapshot
+
+                val throughputMbps = maxOf(sendBps, recvBps) * 8.0 / 1_000_000.0
+                val chartValue = throughputMbps.coerceIn(0.0, 100.0).toFloat()
+                val current = _netSeries.value
+                val updated = (current + chartValue).takeLast(60)
+                _netSeries.value = if (updated.size < 60) {
+                    val pad = List(60 - updated.size) { chartValue }
+                    pad + updated
+                } else {
+                    updated
+                }
+            } catch (e: Exception) {
+                Log.e("TaskManager", "Network snapshot parse error", e)
+            }
+        }
+    }
+
+    private fun getWifiSsid(): String {
+        return try {
+            val wifi = getApplication<Application>().applicationContext.getSystemService(WifiManager::class.java)
+            val ssid = wifi?.connectionInfo?.ssid ?: return "—"
+            if (ssid == "<unknown ssid>" || ssid.isBlank()) "—" else ssid.trim('"')
+        } catch (e: Exception) {
+            "—"
+        }
+    }
+
+    private fun getIpv4Address(iface: String): String {
+        return try {
+            val interfaces = NetworkInterface.getNetworkInterfaces() ?: return "—"
+            val list = Collections.list(interfaces)
+            val netIf = list.firstOrNull { it.name == iface } ?: return "—"
+            val addrs = Collections.list(netIf.inetAddresses)
+            addrs.firstOrNull { it is Inet4Address && !it.isLoopbackAddress }
+                ?.hostAddress ?: "—"
+        } catch (e: Exception) {
+            "—"
         }
     }
 

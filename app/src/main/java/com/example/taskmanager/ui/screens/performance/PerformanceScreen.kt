@@ -65,10 +65,13 @@ fun PerformanceScreen(
     memorySeries: List<Float>,
     diskSnapshot: DiskSnapshot?,
     diskSeries: List<Float>,
+    netSnapshot: NetSnapshot?,
+    netSeries: List<Float>,
     onCpuPoll: () -> Unit,
     onGpuPoll: () -> Unit,
     onMemoryPoll: () -> Unit,
-    onDiskPoll: () -> Unit
+    onDiskPoll: () -> Unit,
+    onNetPoll: () -> Unit
 ) {
     var selectedId by remember { mutableStateOf("memory") }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -95,6 +98,11 @@ fun PerformanceScreen(
                     onDiskPoll()
                     delay(500)
                 }
+            } else if (selectedId == "ethernet") {
+                while (isActive) {
+                    onNetPoll()
+                    delay(1000)
+                }
             }
         }
     }
@@ -108,6 +116,8 @@ fun PerformanceScreen(
             memoryCategoryFromSnapshot(category, memorySnapshot, memorySeries)
         } else if (category.id == "disk" && diskSnapshot != null) {
             diskCategoryFromSnapshot(category, diskSnapshot, diskSeries)
+        } else if (category.id == "ethernet" && netSnapshot != null) {
+            netCategoryFromSnapshot(category, netSnapshot, netSeries)
         } else {
             category
         }
@@ -788,6 +798,42 @@ private fun diskCategoryFromSnapshot(
     )
 }
 
+private fun netCategoryFromSnapshot(
+    base: PerformanceCategory,
+    snapshot: NetSnapshot,
+    series: List<Float>
+): PerformanceCategory {
+    val sendText = formatMbpsBits(snapshot.sendBps)
+    val recvText = formatMbpsBits(snapshot.recvBps)
+    val summary = "S: ${sendText} R: ${recvText}"
+    val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+    val adapterName = if (snapshot.iface.isNotBlank()) snapshot.iface else "—"
+    val ssidText = snapshot.ssid.ifBlank { "—" }
+    val ipText = snapshot.ipv4.ifBlank { "—" }
+    val packetsText = if (snapshot.packetsTotal > 0) {
+        String.format("%,d", snapshot.packetsTotal)
+    } else {
+        "0"
+    }
+
+    return base.copy(
+        summaryText = summary,
+        timeSeries = chartSeries,
+        hardwareName = snapshot.adapterLabel,
+        hardwareSubtitle = adapterName,
+        leftStats = listOf(
+            StatItem("Send", sendText),
+            StatItem("Receive", recvText),
+            StatItem("Packets", packetsText)
+        ),
+        rightStats = listOf(
+            StatItem("Adapter name", adapterName),
+            StatItem("SSID", ssidText),
+            StatItem("IPv4", ipText)
+        )
+    )
+}
+
 private fun formatPercent(value: Double): String {
     return if (value.isNaN()) {
         "—"
@@ -847,6 +893,16 @@ private fun formatMbpsFixed(bytesPerSec: Long): String {
         String.format("%.0f MB/s", clamped)
     } else {
         String.format("%.1f MB/s", clamped)
+    }
+}
+
+private fun formatMbpsBits(bytesPerSec: Long): String {
+    val mbps = (bytesPerSec * 8.0) / 1_000_000.0
+    val clamped = if (mbps < 0.05) 0.0 else mbps
+    return if (clamped >= 100.0) {
+        String.format("%.0f Mbps", clamped)
+    } else {
+        String.format("%.1f Mbps", clamped)
     }
 }
 
