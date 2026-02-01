@@ -6,6 +6,7 @@
 TaskManager-Release/
 TaskManager-Release.apk
 devices_mapping.db
+/socs_mapping.json
 release/*.apk
 release/*.aab
 
