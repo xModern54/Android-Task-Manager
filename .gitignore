@@ -5,6 +5,8 @@
 *.aab
 TaskManager-Release/
 TaskManager-Release.apk
+release/*.apk
+release/*.aab
 
 # Files for the ART/Dalvik VM
 *.dex
