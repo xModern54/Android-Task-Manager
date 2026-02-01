@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include <cmath>
 #include <limits>
+#include <atomic>
 
 struct VulkanContext {
     bool initialized = false;
@@ -40,6 +41,7 @@ struct VulkanContext {
 static std::mutex g_vulkan_mutex;
 static VulkanContext g_vulkan_ctx;
 static bool g_vulkan_init_attempted = false;
+static std::atomic<bool> g_vk_driver_props_logged{false};
 
 static std::string format_vk_version(uint32_t version) {
     if (version == 0) return "";
@@ -250,8 +252,85 @@ static const VulkanContext& get_vulkan_context() {
     return g_vulkan_ctx;
 }
 
+static void log_vk_driver_properties_once(const VulkanContext& ctx) {
+    if (!ctx.supported) return;
+    if (g_vk_driver_props_logged.exchange(true)) return;
+
+    bool hasDriverProps = false;
+    if (ctx.enumerateDeviceExtensionProperties) {
+        uint32_t extCount = 0;
+        if (ctx.enumerateDeviceExtensionProperties(ctx.physicalDevice, nullptr, &extCount, nullptr) == VK_SUCCESS && extCount > 0) {
+            std::vector<VkExtensionProperties> exts(extCount);
+            if (ctx.enumerateDeviceExtensionProperties(ctx.physicalDevice, nullptr, &extCount, exts.data()) == VK_SUCCESS) {
+                for (const auto& ext : exts) {
+                    if (std::string(ext.extensionName) == VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME) {
+                        hasDriverProps = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    __android_log_print(ANDROID_LOG_DEBUG, "HardwareAccess/VkDriverProps",
+                        "KHR_driver_properties: %s", hasDriverProps ? "YES" : "NO");
+    if (!hasDriverProps) return;
+
+    auto getProps2 = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2>(
+            ctx.getInstanceProcAddr ? ctx.getInstanceProcAddr(ctx.instance, "vkGetPhysicalDeviceProperties2") : nullptr);
+    if (!getProps2) {
+        getProps2 = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2>(
+                ctx.getInstanceProcAddr ? ctx.getInstanceProcAddr(ctx.instance, "vkGetPhysicalDeviceProperties2KHR") : nullptr);
+    }
+    if (!getProps2) {
+        __android_log_print(ANDROID_LOG_DEBUG, "HardwareAccess/VkDriverProps",
+                            "vkGetPhysicalDeviceProperties2* not available");
+        return;
+    }
+
+    VkPhysicalDeviceDriverPropertiesKHR driverProps{};
+    driverProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
+    VkPhysicalDeviceProperties2 props2{};
+    props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    props2.pNext = &driverProps;
+
+    getProps2(ctx.physicalDevice, &props2);
+
+    std::stringstream api;
+    api << VK_VERSION_MAJOR(ctx.properties.apiVersion) << "."
+        << VK_VERSION_MINOR(ctx.properties.apiVersion) << "."
+        << VK_VERSION_PATCH(ctx.properties.apiVersion);
+
+    std::stringstream driverHex;
+    driverHex << "0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0')
+              << ctx.properties.driverVersion;
+
+    std::stringstream conf;
+    conf << driverProps.conformanceVersion.major << "."
+         << driverProps.conformanceVersion.minor << "."
+         << driverProps.conformanceVersion.subminor << "."
+         << driverProps.conformanceVersion.patch;
+
+    __android_log_print(ANDROID_LOG_DEBUG, "HardwareAccess/VkDriverProps",
+                        "driverName=%s", driverProps.driverName);
+    __android_log_print(ANDROID_LOG_DEBUG, "HardwareAccess/VkDriverProps",
+                        "driverInfo=%s", driverProps.driverInfo);
+    __android_log_print(ANDROID_LOG_DEBUG, "HardwareAccess/VkDriverProps",
+                        "driverID=%d", driverProps.driverID);
+    __android_log_print(ANDROID_LOG_DEBUG, "HardwareAccess/VkDriverProps",
+                        "conformance=%s", conf.str().c_str());
+    __android_log_print(ANDROID_LOG_DEBUG, "HardwareAccess/VkDriverProps",
+                        "apiVersion=%s driverVersionRaw=%s deviceName=%s vendorID=%u deviceID=%u",
+                        api.str().c_str(),
+                        driverHex.str().c_str(),
+                        ctx.properties.deviceName,
+                        ctx.properties.vendorID,
+                        ctx.properties.deviceID);
+}
+
 std::string get_vulkan_info_json() {
     const VulkanContext& ctx = get_vulkan_context();
+    log_vk_driver_properties_once(ctx);
     if (!ctx.supported) {
         return make_vulkan_json(false, "", "", "", 0, 0, "", ctx.error);
     }
