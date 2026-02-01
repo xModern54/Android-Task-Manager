@@ -575,6 +575,7 @@ std::string get_gpu_snapshot_json() {
 
     VulkanMemorySnapshot mem = get_vulkan_memory_snapshot(error);
     const VulkanContext& ctx = get_vulkan_context();
+    log_vk_driver_properties_once(ctx);
     std::string gpuName;
     if (ctx.supported) {
         std::string vkName = ctx.properties.deviceName;
