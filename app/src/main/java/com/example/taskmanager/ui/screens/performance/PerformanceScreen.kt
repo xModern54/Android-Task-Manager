@@ -709,14 +709,8 @@ private fun memoryCategoryFromSnapshot(
 
     val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
 
-    val compressedText = if (snapshot.compressedBytes > 0) {
-        "${formatBytesGb(snapshot.usedBytes)} (${formatBytesMb(snapshot.compressedBytes)})"
-    } else {
-        "${formatBytesGb(snapshot.usedBytes)} (0 MB)"
-    }
-
-    val committedText = if (snapshot.committedUsedBytes > 0 && snapshot.committedLimitBytes > 0) {
-        "${formatBytesGb(snapshot.committedUsedBytes)}/${formatBytesGb(snapshot.committedLimitBytes)}"
+    val committedText = if (snapshot.committedUsedBytes > 0) {
+        formatBytesGb(snapshot.committedUsedBytes)
     } else {
         "—"
     }
@@ -727,12 +721,13 @@ private fun memoryCategoryFromSnapshot(
         headerRightSecondary = formatBytesGb(snapshot.availableBytes),
         timeSeries = chartSeries,
         leftStats = listOf(
-            StatItem("In use (Compressed)", compressedText),
+            StatItem("In use", formatBytesGb(snapshot.usedBytes)),
             StatItem("Committed", committedText),
             StatItem("Cached", formatBytesGb(snapshot.cachedBytes))
         ),
         rightStats = listOf(
-            StatItem("Available", formatBytesGb(snapshot.availableBytes))
+            StatItem("Available", formatBytesGb(snapshot.availableBytes)),
+            StatItem("Total", formatBytesGb(snapshot.totalBytes))
         ),
         metaStats = emptyList()
     )
