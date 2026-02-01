@@ -18,7 +18,7 @@
 #include "performance_mini.h"
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getProcessList(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getProcessList(
         JNIEnv* env,
         jobject /* this */) {
     std::string result = build_process_list();
@@ -26,7 +26,7 @@ Java_com_example_taskmanager_service_NativeBridge_getProcessList(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getProcessExtendedInfo(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getProcessExtendedInfo(
         JNIEnv* env,
         jobject /* this */,
         jint pid) {
@@ -74,7 +74,7 @@ Java_com_example_taskmanager_service_NativeBridge_getProcessExtendedInfo(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getProcessDeepSnapshot(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getProcessDeepSnapshot(
         JNIEnv* env,
         jobject /* this */,
         jint pid) {
@@ -148,7 +148,7 @@ Java_com_example_taskmanager_service_NativeBridge_getProcessDeepSnapshot(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_example_taskmanager_service_NativeBridge_sendSignal(
+Java_com_xmodern_taskmgmt_service_NativeBridge_sendSignal(
         JNIEnv* env,
         jobject /* this */,
         jint pid,
@@ -158,7 +158,7 @@ Java_com_example_taskmanager_service_NativeBridge_sendSignal(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getKillCandidates(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getKillCandidates(
         JNIEnv* env,
         jobject /* this */) {
     std::string res = get_kill_candidates();
@@ -166,7 +166,7 @@ Java_com_example_taskmanager_service_NativeBridge_getKillCandidates(
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_example_taskmanager_service_NativeBridge_executeKillTransaction(
+Java_com_xmodern_taskmgmt_service_NativeBridge_executeKillTransaction(
         JNIEnv* env,
         jobject /* this */,
         jstring packagesStr) {
@@ -180,7 +180,7 @@ Java_com_example_taskmanager_service_NativeBridge_executeKillTransaction(
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getFreeRam(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getFreeRam(
         JNIEnv* env,
         jobject /* this */) {
     RamInfo ram = getGlobalRamUsage();
@@ -188,14 +188,14 @@ Java_com_example_taskmanager_service_NativeBridge_getFreeRam(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_hello(
+Java_com_xmodern_taskmgmt_service_NativeBridge_hello(
         JNIEnv* env,
         jobject /* this */) {
     return env->NewStringUTF("Hello from C++ Native Backend!");
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getCpuSnapshotJson(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getCpuSnapshotJson(
         JNIEnv* env,
         jobject /* this */) {
     std::string json = get_cpu_snapshot_json();
@@ -203,7 +203,7 @@ Java_com_example_taskmanager_service_NativeBridge_getCpuSnapshotJson(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getVulkanInfoJson(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getVulkanInfoJson(
         JNIEnv* env,
         jobject /* this */) {
     std::string json = get_vulkan_info_json();
@@ -211,7 +211,7 @@ Java_com_example_taskmanager_service_NativeBridge_getVulkanInfoJson(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getGpuSnapshotJson(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getGpuSnapshotJson(
         JNIEnv* env,
         jobject /* this */) {
     std::string json = get_gpu_snapshot_json();
@@ -219,7 +219,7 @@ Java_com_example_taskmanager_service_NativeBridge_getGpuSnapshotJson(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getMemorySnapshotJson(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getMemorySnapshotJson(
         JNIEnv* env,
         jobject /* this */) {
     std::string json = get_memory_snapshot_json();
@@ -227,7 +227,7 @@ Java_com_example_taskmanager_service_NativeBridge_getMemorySnapshotJson(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getDiskSnapshotJson(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getDiskSnapshotJson(
         JNIEnv* env,
         jobject /* this */) {
     std::string json = get_disk_snapshot_json();
@@ -235,7 +235,7 @@ Java_com_example_taskmanager_service_NativeBridge_getDiskSnapshotJson(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getNetSnapshotJson(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getNetSnapshotJson(
         JNIEnv* env,
         jobject /* this */) {
     std::string json = get_net_snapshot_json();
@@ -243,7 +243,7 @@ Java_com_example_taskmanager_service_NativeBridge_getNetSnapshotJson(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_taskmanager_service_NativeBridge_getPerformanceMiniSnapshotJson(
+Java_com_xmodern_taskmgmt_service_NativeBridge_getPerformanceMiniSnapshotJson(
         JNIEnv* env,
         jobject /* this */) {
     std::string json = get_performance_mini_snapshot_json();
