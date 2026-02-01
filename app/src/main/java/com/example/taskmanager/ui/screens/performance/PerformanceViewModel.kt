@@ -70,6 +70,7 @@ data class DiskSnapshot(
     val avgResponseMs: Double,
     val avgResponseMsDisplay: Double?,
     val mountPoint: String,
+    val fsType: String,
     val blockDevice: String,
     val timestampMs: Long,
     val error: String
@@ -247,6 +248,7 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                     avgResponseMs = rawAvg,
                     avgResponseMsDisplay = lastDiskAvgResponseMs,
                     mountPoint = obj.optString("mountPoint", "/data"),
+                    fsType = obj.optString("fsType", ""),
                     blockDevice = obj.optString("blockDevice", ""),
                     timestampMs = obj.optLong("timestampMs", 0L),
                     error = obj.optString("error", "")

@@ -759,8 +759,13 @@ private fun diskCategoryFromSnapshot(
     val avgResponse = snapshot.avgResponseMsDisplay?.let {
         String.format("%.1f ms", it)
     } ?: "—"
-    val summary = "R:${formatKbpsFixed(snapshot.readBps)} W:${formatKbpsFixed(snapshot.writeBps)}"
+    val summary = "R:${formatMbpsFixed(snapshot.readBps)} W:${formatMbpsFixed(snapshot.writeBps)}"
     val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+    val fsLabel = if (snapshot.fsType.isNotBlank()) {
+        snapshot.fsType.uppercase()
+    } else {
+        "—"
+    }
 
     return base.copy(
         displayName = mountLabel,
@@ -771,16 +776,15 @@ private fun diskCategoryFromSnapshot(
         leftStats = listOf(
             StatItem("Active time", activeText),
             StatItem("Average response time", avgResponse),
-            StatItem("Capacity", formatBytesGb(snapshot.totalBytes))
+            StatItem("Capacity", formatBytesGb(snapshot.totalBytes)),
+            StatItem("File system", fsLabel)
         ),
         rightStats = listOf(
             StatItem("Read speed", readText),
             StatItem("Write speed", writeText),
             StatItem("Available", formatBytesGb(snapshot.availableBytes))
         ),
-        metaStats = listOf(
-            StatItem("Type:", "Internal drive")
-        )
+        metaStats = emptyList()
     )
 }
 
@@ -836,13 +840,13 @@ private fun formatBytesPerSec(bytesPerSec: Long): String {
     }
 }
 
-private fun formatKbpsFixed(bytesPerSec: Long): String {
-    val kb = bytesPerSec / 1024.0
-    val clamped = if (kb < 0.5) 0.0 else kb
+private fun formatMbpsFixed(bytesPerSec: Long): String {
+    val mb = bytesPerSec / 1048576.0
+    val clamped = if (mb < 0.05) 0.0 else mb
     return if (clamped >= 100.0) {
-        String.format("%.0f KB/s", clamped)
+        String.format("%.0f MB/s", clamped)
     } else {
-        String.format("%.1f KB/s", clamped)
+        String.format("%.1f MB/s", clamped)
     }
 }
 

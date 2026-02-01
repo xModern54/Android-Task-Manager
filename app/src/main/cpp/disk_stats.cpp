@@ -49,6 +49,20 @@ std::string find_mount_source(const std::string& mountPoint) {
     return "";
 }
 
+std::string find_mount_fstype(const std::string& mountPoint) {
+    std::string mounts = read_file_string("/proc/mounts");
+    if (mounts.empty()) return "";
+    std::stringstream ss(mounts);
+    std::string line;
+    while (std::getline(ss, line)) {
+        std::stringstream ls(line);
+        std::string src, mnt, fstype;
+        if (!(ls >> src >> mnt >> fstype)) continue;
+        if (mnt == mountPoint) return fstype;
+    }
+    return "";
+}
+
 bool read_block_stat(const std::string& dev, DiskSample& out) {
     std::string statPath = "/sys/block/" + dev + "/stat";
     std::string content = read_file_string(statPath);
@@ -89,6 +103,7 @@ std::string get_disk_snapshot_json() {
     }
 
     std::string source = find_mount_source(mountPoint);
+    std::string fsType = find_mount_fstype(mountPoint);
     std::string blockDevice = "";
     if (!source.empty()) {
         if (source.rfind("/dev/", 0) == 0) {
@@ -161,6 +176,7 @@ std::string get_disk_snapshot_json() {
     ss << "\"activeTimePct\":" << activeTimePct << ",";
     ss << "\"avgResponseMs\":" << avgResponseMs << ",";
     ss << "\"mountPoint\":\"" << escape_json(mountPoint) << "\",";
+    ss << "\"fsType\":\"" << escape_json(fsType) << "\",";
     ss << "\"blockDevice\":\"" << escape_json(blockDevice) << "\",";
     ss << "\"timestampMs\":" << timestampMs << ",";
     ss << "\"error\":\"" << escape_json(error) << "\"";
