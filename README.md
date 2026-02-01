@@ -13,13 +13,9 @@ This project targets low-level, system-oriented visibility on rooted devices and
 
 ## Screenshots
 
-<p>
-  <img src="docs/images/process_list.png" alt="Process List" width="340" style="max-width: 100%; height: auto;" />
-</p>
-
-<p>
-  <img src="docs/images/performance.png" alt="Performance" width="340" style="max-width: 100%; height: auto;" />
-</p>
+| Process List | Performance |
+|:---:|:---:|
+| ![Process List](docs/images/process_list.png) | ![Performance](docs/images/performance.png) |
 
 ## Requirements
 These versions are used by this project:
