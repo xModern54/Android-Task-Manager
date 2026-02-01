@@ -756,12 +756,10 @@ private fun diskCategoryFromSnapshot(
     val activeText = formatPercent(snapshot.activeTimePct)
     val readText = formatBytesPerSec(snapshot.readBps)
     val writeText = formatBytesPerSec(snapshot.writeBps)
-    val avgResponse = if (snapshot.avgResponseMs > 0.0) {
-        String.format("%.1f ms", snapshot.avgResponseMs)
-    } else {
-        "—"
-    }
-    val summary = "${activeText} R:${readText} W:${writeText}"
+    val avgResponse = snapshot.avgResponseMsDisplay?.let {
+        String.format("%.1f ms", it)
+    } ?: "—"
+    val summary = "R:${formatKbpsFixed(snapshot.readBps)} W:${formatKbpsFixed(snapshot.writeBps)}"
     val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
 
     return base.copy(
@@ -773,11 +771,11 @@ private fun diskCategoryFromSnapshot(
         leftStats = listOf(
             StatItem("Active time", activeText),
             StatItem("Average response time", avgResponse),
-            StatItem("Read speed", readText)
+            StatItem("Capacity", formatBytesGb(snapshot.totalBytes))
         ),
         rightStats = listOf(
+            StatItem("Read speed", readText),
             StatItem("Write speed", writeText),
-            StatItem("Capacity", formatBytesGb(snapshot.totalBytes)),
             StatItem("Available", formatBytesGb(snapshot.availableBytes))
         ),
         metaStats = listOf(
@@ -835,6 +833,16 @@ private fun formatBytesPerSec(bytesPerSec: Long): String {
     } else {
         val mb = kb / 1024.0
         String.format("%.1f MB/s", mb)
+    }
+}
+
+private fun formatKbpsFixed(bytesPerSec: Long): String {
+    val kb = bytesPerSec / 1024.0
+    val clamped = if (kb < 0.5) 0.0 else kb
+    return if (clamped >= 100.0) {
+        String.format("%.0f KB/s", clamped)
+    } else {
+        String.format("%.1f KB/s", clamped)
     }
 }
 

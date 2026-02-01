@@ -68,6 +68,7 @@ data class DiskSnapshot(
     val writeBps: Long,
     val activeTimePct: Double,
     val avgResponseMs: Double,
+    val avgResponseMsDisplay: Double?,
     val mountPoint: String,
     val blockDevice: String,
     val timestampMs: Long,
@@ -101,6 +102,8 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _diskSeries = MutableStateFlow<List<Float>>(emptyList())
     val diskSeries: StateFlow<List<Float>> = _diskSeries.asStateFlow()
+
+    private var lastDiskAvgResponseMs: Double? = null
 
     init {
         rootManager.bind()
@@ -230,6 +233,10 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
             val json = rootManager.getDiskSnapshotJson() ?: return@launch
             try {
                 val obj = JSONObject(json)
+                val rawAvg = obj.optDouble("avgResponseMs", 0.0)
+                if (rawAvg > 0.0) {
+                    lastDiskAvgResponseMs = rawAvg
+                }
                 val snapshot = DiskSnapshot(
                     totalBytes = obj.optLong("totalBytes", 0L),
                     usedBytes = obj.optLong("usedBytes", 0L),
@@ -237,7 +244,8 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                     readBps = obj.optLong("readBps", 0L),
                     writeBps = obj.optLong("writeBps", 0L),
                     activeTimePct = obj.optDouble("activeTimePct", 0.0),
-                    avgResponseMs = obj.optDouble("avgResponseMs", 0.0),
+                    avgResponseMs = rawAvg,
+                    avgResponseMsDisplay = lastDiskAvgResponseMs,
                     mountPoint = obj.optString("mountPoint", "/data"),
                     blockDevice = obj.optString("blockDevice", ""),
                     timestampMs = obj.optLong("timestampMs", 0L),
