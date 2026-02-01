@@ -15,6 +15,7 @@
 #include "memory_stats.h"
 #include "disk_stats.h"
 #include "net_stats.h"
+#include "performance_mini.h"
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_example_taskmanager_service_NativeBridge_getProcessList(
@@ -238,5 +239,13 @@ Java_com_example_taskmanager_service_NativeBridge_getNetSnapshotJson(
         JNIEnv* env,
         jobject /* this */) {
     std::string json = get_net_snapshot_json();
+    return env->NewStringUTF(json.c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_example_taskmanager_service_NativeBridge_getPerformanceMiniSnapshotJson(
+        JNIEnv* env,
+        jobject /* this */) {
+    std::string json = get_performance_mini_snapshot_json();
     return env->NewStringUTF(json.c_str());
 }

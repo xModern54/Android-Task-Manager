@@ -15,7 +15,8 @@ add_library(
         gpu_stats.cpp
         memory_stats.cpp
         net_stats.cpp
-        disk_stats.cpp)
+        disk_stats.cpp
+        performance_mini.cpp)
 
 find_library(
         log-lib

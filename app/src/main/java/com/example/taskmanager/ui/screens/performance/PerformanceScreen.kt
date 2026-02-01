@@ -67,14 +67,30 @@ fun PerformanceScreen(
     diskSeries: List<Float>,
     netSnapshot: NetSnapshot?,
     netSeries: List<Float>,
+    miniSnapshot: MiniSnapshot?,
     onCpuPoll: () -> Unit,
     onGpuPoll: () -> Unit,
     onMemoryPoll: () -> Unit,
     onDiskPoll: () -> Unit,
-    onNetPoll: () -> Unit
+    onNetPoll: () -> Unit,
+    onMiniPoll: () -> Unit,
+    onSelectedCategoryChanged: (String) -> Unit
 ) {
     var selectedId by remember { mutableStateOf("memory") }
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(selectedId) {
+        onSelectedCategoryChanged(selectedId)
+    }
+
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            while (isActive) {
+                onMiniPoll()
+                delay(500)
+            }
+        }
+    }
 
     LaunchedEffect(selectedId, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
@@ -108,18 +124,26 @@ fun PerformanceScreen(
     }
 
     val displayCategories = categories.map { category ->
-        if (category.id == "cpu" && cpuSnapshot != null) {
-            cpuCategoryFromSnapshot(category, cpuSnapshot, cpuSeries)
-        } else if (category.id == "gpu" && gpuSnapshot != null) {
-            gpuCategoryFromSnapshot(category, gpuSnapshot, gpuSeries)
-        } else if (category.id == "memory" && memorySnapshot != null) {
-            memoryCategoryFromSnapshot(category, memorySnapshot, memorySeries)
-        } else if (category.id == "disk" && diskSnapshot != null) {
-            diskCategoryFromSnapshot(category, diskSnapshot, diskSeries)
-        } else if (category.id == "ethernet" && netSnapshot != null) {
-            netCategoryFromSnapshot(category, netSnapshot, netSeries)
+        val withMini = when (category.id) {
+            "cpu" -> miniSnapshot?.let { cpuCategoryFromMini(category, it, cpuSeries) } ?: category
+            "memory" -> miniSnapshot?.let { memoryCategoryFromMini(category, it, memorySeries) } ?: category
+            "disk" -> miniSnapshot?.let { diskCategoryFromMini(category, it, diskSeries) } ?: category
+            "ethernet" -> miniSnapshot?.let { netCategoryFromMini(category, it, netSeries) } ?: category
+            "gpu" -> miniSnapshot?.let { gpuCategoryFromMini(category, it, gpuSeries) } ?: category
+            else -> category
+        }
+
+        if (category.id == selectedId) {
+            when (category.id) {
+                "cpu" -> cpuSnapshot?.let { cpuCategoryFromSnapshot(withMini, it, cpuSeries) } ?: withMini
+                "gpu" -> gpuSnapshot?.let { gpuCategoryFromSnapshot(withMini, it, gpuSeries) } ?: withMini
+                "memory" -> memorySnapshot?.let { memoryCategoryFromSnapshot(withMini, it, memorySeries) } ?: withMini
+                "disk" -> diskSnapshot?.let { diskCategoryFromSnapshot(withMini, it, diskSeries) } ?: withMini
+                "ethernet" -> netSnapshot?.let { netCategoryFromSnapshot(withMini, it, netSeries) } ?: withMini
+                else -> withMini
+            }
         } else {
-            category
+            withMini
         }
     }
 
@@ -750,6 +774,83 @@ private fun memoryCategoryFromSnapshot(
             StatItem("Total", formatBytesGb(snapshot.totalBytes))
         ),
         metaStats = emptyList()
+    )
+}
+
+private fun cpuCategoryFromMini(
+    base: PerformanceCategory,
+    mini: MiniSnapshot,
+    series: List<Float>
+): PerformanceCategory {
+    val utilText = String.format("%.0f%%", mini.cpuUtil.coerceIn(0.0, 100.0))
+    val freqText = formatGHz(mini.cpuMaxFreqKHz)
+    val summary = if (freqText == "—") utilText else "$utilText $freqText"
+    val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+    return base.copy(
+        summaryText = summary,
+        timeSeries = chartSeries
+    )
+}
+
+private fun memoryCategoryFromMini(
+    base: PerformanceCategory,
+    mini: MiniSnapshot,
+    series: List<Float>
+): PerformanceCategory {
+    val totalGb = formatBytesGb(mini.memTotalBytes)
+    val usedGb = formatBytesGb(mini.memUsedBytes)
+    val percent = if (mini.memTotalBytes > 0) {
+        (mini.memUsedBytes.toDouble() / mini.memTotalBytes.toDouble()) * 100.0
+    } else {
+        0.0
+    }
+    val pct = String.format("%.0f%%", percent)
+    val summary = if (mini.memTotalBytes > 0) "$usedGb/$totalGb ($pct)" else base.summaryText
+    val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+    return base.copy(
+        summaryText = summary,
+        timeSeries = chartSeries
+    )
+}
+
+private fun diskCategoryFromMini(
+    base: PerformanceCategory,
+    mini: MiniSnapshot,
+    series: List<Float>
+): PerformanceCategory {
+    val summary = "R:${formatMbpsFixed(mini.diskReadBps)} W:${formatMbpsFixed(mini.diskWriteBps)}"
+    val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+    return base.copy(
+        summaryText = summary,
+        timeSeries = chartSeries
+    )
+}
+
+private fun netCategoryFromMini(
+    base: PerformanceCategory,
+    mini: MiniSnapshot,
+    series: List<Float>
+): PerformanceCategory {
+    val sendText = formatMbpsBits(mini.netSendBps)
+    val recvText = formatMbpsBits(mini.netRecvBps)
+    val summary = "S: ${sendText} R: ${recvText}"
+    val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+    return base.copy(
+        summaryText = summary,
+        timeSeries = chartSeries
+    )
+}
+
+private fun gpuCategoryFromMini(
+    base: PerformanceCategory,
+    mini: MiniSnapshot,
+    series: List<Float>
+): PerformanceCategory {
+    val utilText = String.format("%.0f%%", mini.gpuUtil.coerceIn(0.0, 100.0))
+    val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+    return base.copy(
+        summaryText = utilText,
+        timeSeries = chartSeries
     )
 }
 

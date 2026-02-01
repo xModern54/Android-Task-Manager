@@ -18,6 +18,7 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.util.Collections
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
 
 
 data class CpuSnapshot(
@@ -93,6 +94,22 @@ data class NetSnapshot(
     val packetsTotal: Long
 )
 
+data class MiniSnapshot(
+    val timestampMs: Long,
+    val cpuUtil: Double,
+    val cpuMaxFreqKHz: Long,
+    val memUsedBytes: Long,
+    val memTotalBytes: Long,
+    val diskReadBps: Long,
+    val diskWriteBps: Long,
+    val netIface: String,
+    val netRxBytes: Long,
+    val netTxBytes: Long,
+    val netSendBps: Long,
+    val netRecvBps: Long,
+    val gpuUtil: Double
+)
+
 class PerformanceViewModel(application: Application) : AndroidViewModel(application) {
     private val rootManager = RootConnectionManager(application)
     private var tempLogCounter = 0
@@ -127,6 +144,9 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
     private val _netSeries = MutableStateFlow<List<Float>>(emptyList())
     val netSeries: StateFlow<List<Float>> = _netSeries.asStateFlow()
 
+    private val _miniSnapshot = MutableStateFlow<MiniSnapshot?>(null)
+    val miniSnapshot: StateFlow<MiniSnapshot?> = _miniSnapshot.asStateFlow()
+
     private var lastDiskAvgResponseMs: Double? = null
     private var lastNetIface: String? = null
     private var lastNetRxBytes: Long = 0
@@ -138,8 +158,20 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
     private var lastNetSsidTimeMs: Long = 0
     private var lastNetIpv4: String? = null
 
+    private var selectedCategoryId: String = "memory"
+    private val lastFullUpdatedMs = mutableMapOf<String, Long>()
+    private var lastMiniNetRxBytes: Long = 0
+    private var lastMiniNetTxBytes: Long = 0
+    private var lastMiniNetTimestampMs: Long = 0
+
+    private val seriesCapacity = 60
+
     init {
         rootManager.bind()
+    }
+
+    fun setSelectedCategory(id: String) {
+        selectedCategoryId = id
     }
 
     fun refreshCpuSnapshot() {
@@ -174,14 +206,8 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                     )
                 }
                 val clamped = snapshot.usagePercent.coerceIn(0.0, 100.0).toFloat()
-                val current = _cpuSeries.value
-                val updated = (current + clamped).takeLast(60)
-                _cpuSeries.value = if (updated.size < 60) {
-                    val pad = List(60 - updated.size) { clamped }
-                    pad + updated
-                } else {
-                    updated
-                }
+                pushSeries(_cpuSeries, clamped)
+                lastFullUpdatedMs["cpu"] = System.currentTimeMillis()
             } catch (e: Exception) {
                 Log.e("TaskManager", "CPU snapshot parse error", e)
             }
@@ -211,14 +237,8 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                 )
                 _gpuSnapshot.value = snapshot
                 val clamped = snapshot.utilPercent.coerceIn(0.0, 100.0).toFloat()
-                val current = _gpuSeries.value
-                val updated = (current + clamped).takeLast(60)
-                _gpuSeries.value = if (updated.size < 60) {
-                    val pad = List(60 - updated.size) { clamped }
-                    pad + updated
-                } else {
-                    updated
-                }
+                pushSeries(_gpuSeries, clamped)
+                lastFullUpdatedMs["gpu"] = System.currentTimeMillis()
             } catch (e: Exception) {
                 Log.e("TaskManager", "GPU snapshot parse error", e)
             }
@@ -247,14 +267,8 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                     0.0
                 }
                 val clamped = percent.coerceIn(0.0, 100.0).toFloat()
-                val current = _memorySeries.value
-                val updated = (current + clamped).takeLast(60)
-                _memorySeries.value = if (updated.size < 60) {
-                    val pad = List(60 - updated.size) { clamped }
-                    pad + updated
-                } else {
-                    updated
-                }
+                pushSeries(_memorySeries, clamped)
+                lastFullUpdatedMs["memory"] = System.currentTimeMillis()
             } catch (e: Exception) {
                 Log.e("TaskManager", "Memory snapshot parse error", e)
             }
@@ -287,14 +301,8 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                 )
                 _diskSnapshot.value = snapshot
                 val clamped = snapshot.activeTimePct.coerceIn(0.0, 100.0).toFloat()
-                val current = _diskSeries.value
-                val updated = (current + clamped).takeLast(60)
-                _diskSeries.value = if (updated.size < 60) {
-                    val pad = List(60 - updated.size) { clamped }
-                    pad + updated
-                } else {
-                    updated
-                }
+                pushSeries(_diskSeries, clamped)
+                lastFullUpdatedMs["disk"] = System.currentTimeMillis()
             } catch (e: Exception) {
                 Log.e("TaskManager", "Disk snapshot parse error", e)
             }
@@ -355,19 +363,120 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                 )
                 _netSnapshot.value = snapshot
 
-                val throughputMbps = maxOf(sendBps, recvBps) * 8.0 / 1_000_000.0
+                val throughputMbps = max(sendBps, recvBps) * 8.0 / 1_000_000.0
                 val chartValue = throughputMbps.coerceIn(0.0, 100.0).toFloat()
-                val current = _netSeries.value
-                val updated = (current + chartValue).takeLast(60)
-                _netSeries.value = if (updated.size < 60) {
-                    val pad = List(60 - updated.size) { chartValue }
-                    pad + updated
-                } else {
-                    updated
-                }
+                pushSeries(_netSeries, chartValue)
+                lastFullUpdatedMs["ethernet"] = System.currentTimeMillis()
             } catch (e: Exception) {
                 Log.e("TaskManager", "Network snapshot parse error", e)
             }
+        }
+    }
+
+    fun refreshMiniSnapshot() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val json = rootManager.getPerformanceMiniSnapshotJson() ?: return@launch
+            try {
+                val obj = JSONObject(json)
+                val ts = obj.optLong("timestampMs", 0L)
+
+                val cpuObj = obj.optJSONObject("cpu")
+                val cpuUtil = cpuObj?.optDouble("util", 0.0) ?: 0.0
+                val cpuMaxFreq = cpuObj?.optLong("maxFreqKHz", 0L) ?: 0L
+
+                val memObj = obj.optJSONObject("mem")
+                val memUsed = memObj?.optLong("usedBytes", 0L) ?: 0L
+                val memTotal = memObj?.optLong("totalBytes", 0L) ?: 0L
+
+                val diskObj = obj.optJSONObject("disk")
+                val diskRead = diskObj?.optLong("readBps", 0L) ?: 0L
+                val diskWrite = diskObj?.optLong("writeBps", 0L) ?: 0L
+
+                val netObj = obj.optJSONObject("net")
+                val netIface = netObj?.optString("iface", "") ?: ""
+                val netRx = netObj?.optLong("rxBytes", 0L) ?: 0L
+                val netTx = netObj?.optLong("txBytes", 0L) ?: 0L
+
+                val gpuObj = obj.optJSONObject("gpu")
+                val gpuUtil = gpuObj?.optDouble("util", 0.0) ?: 0.0
+
+                val miniNetBps = computeMiniNetBps(netRx, netTx, ts)
+                _miniSnapshot.value = MiniSnapshot(
+                    timestampMs = ts,
+                    cpuUtil = cpuUtil,
+                    cpuMaxFreqKHz = cpuMaxFreq,
+                    memUsedBytes = memUsed,
+                    memTotalBytes = memTotal,
+                    diskReadBps = diskRead,
+                    diskWriteBps = diskWrite,
+                    netIface = netIface,
+                    netRxBytes = netRx,
+                    netTxBytes = netTx,
+                    netSendBps = miniNetBps.second,
+                    netRecvBps = miniNetBps.first,
+                    gpuUtil = gpuUtil
+                )
+
+                val now = System.currentTimeMillis()
+                if (!shouldUseFull("cpu", now)) {
+                    pushSeries(_cpuSeries, cpuUtil.coerceIn(0.0, 100.0).toFloat())
+                }
+
+                if (!shouldUseFull("memory", now)) {
+                    val pct = if (memTotal > 0) (memUsed.toDouble() / memTotal.toDouble()) * 100.0 else 0.0
+                    pushSeries(_memorySeries, pct.coerceIn(0.0, 100.0).toFloat())
+                }
+
+                if (!shouldUseFull("disk", now)) {
+                    val diskMb = max(diskRead, diskWrite) / 1048576.0
+                    pushSeries(_diskSeries, diskMb.coerceIn(0.0, 100.0).toFloat())
+                }
+
+                if (!shouldUseFull("ethernet", now)) {
+                    val throughputMbps = max(miniNetBps.first, miniNetBps.second) * 8.0 / 1_000_000.0
+                    pushSeries(_netSeries, throughputMbps.coerceIn(0.0, 100.0).toFloat())
+                }
+
+                if (!shouldUseFull("gpu", now)) {
+                    pushSeries(_gpuSeries, gpuUtil.coerceIn(0.0, 100.0).toFloat())
+                }
+            } catch (e: Exception) {
+                Log.e("TaskManager", "Mini snapshot parse error", e)
+            }
+        }
+    }
+
+    private fun shouldUseFull(id: String, nowMs: Long): Boolean {
+        if (selectedCategoryId != id) return false
+        val last = lastFullUpdatedMs[id] ?: return false
+        return nowMs - last < 1200
+    }
+
+    private fun computeMiniNetBps(rxBytes: Long, txBytes: Long, timestampMs: Long): Pair<Long, Long> {
+        if (timestampMs <= 0) return 0L to 0L
+        if (lastMiniNetTimestampMs <= 0) {
+            lastMiniNetTimestampMs = timestampMs
+            lastMiniNetRxBytes = rxBytes
+            lastMiniNetTxBytes = txBytes
+            return 0L to 0L
+        }
+        val dtMs = (timestampMs - lastMiniNetTimestampMs).coerceAtLeast(0L)
+        val rx = if (dtMs > 0) ((rxBytes - lastMiniNetRxBytes).coerceAtLeast(0L) * 1000L) / dtMs else 0L
+        val tx = if (dtMs > 0) ((txBytes - lastMiniNetTxBytes).coerceAtLeast(0L) * 1000L) / dtMs else 0L
+        lastMiniNetTimestampMs = timestampMs
+        lastMiniNetRxBytes = rxBytes
+        lastMiniNetTxBytes = txBytes
+        return rx to tx
+    }
+
+    private fun pushSeries(flow: MutableStateFlow<List<Float>>, value: Float) {
+        val current = flow.value
+        val updated = (current + value).takeLast(seriesCapacity)
+        flow.value = if (updated.size < seriesCapacity) {
+            val pad = List(seriesCapacity - updated.size) { value }
+            pad + updated
+        } else {
+            updated
         }
     }
 

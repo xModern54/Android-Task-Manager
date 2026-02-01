@@ -452,4 +452,13 @@ class RootConnectionManager(private val context: Context) {
         }
     }
 
+    fun getPerformanceMiniSnapshotJson(): String? {
+        return try {
+            rootService?.performanceMiniSnapshotJson
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error getting mini snapshot", e)
+            null
+        }
+    }
+
 }

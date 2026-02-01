@@ -224,6 +224,10 @@ class RootBackendService : RootService() {
                                                                 return NativeBridge.getNetSnapshotJson()
                                                             }
 
+                                                            override fun getPerformanceMiniSnapshotJson(): String {
+                                                                return NativeBridge.getPerformanceMiniSnapshotJson()
+                                                            }
+
 
 
             
