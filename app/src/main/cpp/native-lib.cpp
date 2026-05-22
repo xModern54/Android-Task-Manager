@@ -16,6 +16,7 @@
 #include "disk_stats.h"
 #include "net_stats.h"
 #include "performance_mini.h"
+#include "battery_stats.h"
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_xmodern_taskmgmt_service_NativeBridge_getProcessList(
@@ -105,6 +106,10 @@ Java_com_xmodern_taskmgmt_service_NativeBridge_getProcessDeepSnapshot(
     time_ss << std::setfill('0') << std::setw(2) << h << ":"
             << std::setfill('0') << std::setw(2) << m << ":"
             << std::setfill('0') << std::setw(2) << s;
+    unsigned long long syscr = 0;
+    unsigned long long syscw = 0;
+    get_io_syscall_counts(pid_str, syscr, syscw);
+    unsigned long long syscalls_total = syscr + syscw;
 
     ss << "OVERVIEW:Name=" << name << "|"
        << "PID=" << pid << "|"
@@ -115,7 +120,10 @@ Java_com_xmodern_taskmgmt_service_NativeBridge_getProcessDeepSnapshot(
        << "Priority=" << priority << "|"
        << "OomScore=" << oom << "|"
        << "ElapsedTime=" << time_ss.str() << "|"
-       << "ExePath=" << path << "\n";
+       << "ExePath=" << path << "|"
+       << "SyscallsTotal=" << syscalls_total << "|"
+       << "SyscallsRead=" << syscr << "|"
+       << "SyscallsWrite=" << syscw << "\n";
 
     // --- STATS SECTION ---
     std::unordered_map<std::string, std::string> stats;
@@ -247,5 +255,13 @@ Java_com_xmodern_taskmgmt_service_NativeBridge_getPerformanceMiniSnapshotJson(
         JNIEnv* env,
         jobject /* this */) {
     std::string json = get_performance_mini_snapshot_json();
+    return env->NewStringUTF(json.c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_xmodern_taskmgmt_service_NativeBridge_getBatterySnapshotJson(
+        JNIEnv* env,
+        jobject /* this */) {
+    std::string json = get_battery_snapshot_json();
     return env->NewStringUTF(json.c_str());
 }

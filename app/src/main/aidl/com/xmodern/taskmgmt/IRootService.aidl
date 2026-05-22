@@ -31,6 +31,8 @@ interface IRootService {
     String getNetSnapshotJson();
 
     String getPerformanceMiniSnapshotJson();
+
+    String getBatterySnapshotJson();
 }
 
         

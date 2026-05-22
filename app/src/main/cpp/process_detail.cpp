@@ -15,6 +15,10 @@
 #include <cstdlib>
 #include <cerrno>
 #include <cstring>
+#include <iomanip>
+
+static std::unordered_map<std::string, std::unordered_map<std::string, unsigned long long>> g_prev_thread_counter_by_pid;
+static std::unordered_map<std::string, std::unordered_map<std::string, double>> g_prev_thread_share_by_pid;
 
 std::string getProcessName(const std::string& pid) {
     std::string name;
@@ -234,7 +238,21 @@ std::vector<std::string> get_modules_list(const std::string& pid) {
 }
 
 std::vector<std::string> get_threads_list(const std::string& pid) {
+    struct ThreadEntry {
+        std::string tid;
+        std::string name;
+        int priority = 0;
+        int lastCpu = -1;
+        unsigned long long deltaTicks = 0;
+        double cpuSharePercent = 0.0;
+    };
+
     std::vector<std::string> threads;
+    std::vector<ThreadEntry> entries;
+    std::unordered_map<std::string, unsigned long long> currentCounters;
+    std::unordered_map<std::string, double> nextShares;
+    auto& prevCounters = g_prev_thread_counter_by_pid[pid];
+    auto& prevShares = g_prev_thread_share_by_pid[pid];
     std::string taskPath = "/proc/" + pid + "/task";
     DIR* taskDir = opendir(taskPath.c_str());
     if (taskDir == nullptr) return threads;
@@ -251,11 +269,100 @@ std::vector<std::string> get_threads_list(const std::string& pid) {
                     std::getline(commFile, name);
                     if (!name.empty() && name.back() == '\n') name.pop_back();
                 }
-                threads.push_back(tid + ":" + name);
+                int prio = 0;
+                std::string statPath = taskPath + "/" + tid + "/stat";
+                std::ifstream statFile(statPath);
+                if (statFile.is_open()) {
+                    std::string content((std::istreambuf_iterator<char>(statFile)),
+                                        std::istreambuf_iterator<char>());
+                    size_t lastParen = content.rfind(')');
+                    if (lastParen != std::string::npos) {
+                        std::string tail = content.substr(lastParen + 1);
+                        std::stringstream ss(tail);
+                        std::vector<std::string> fields;
+                        std::string token;
+                        while (ss >> token) fields.push_back(token);
+                        if (fields.size() > 15) {
+                            try {
+                                prio = std::stoi(fields[15]); // stat field 18: priority
+                            } catch (...) {
+                                prio = 0;
+                            }
+                        }
+                        unsigned long long threadTicks = 0;
+                        if (fields.size() > 12) {
+                            try {
+                                unsigned long long utime = std::stoull(fields[11]); // stat field 14
+                                unsigned long long stime = std::stoull(fields[12]); // stat field 15
+                                threadTicks = utime + stime;
+                            } catch (...) {
+                                threadTicks = 0;
+                            }
+                        }
+                        unsigned long long runtimeNs = 0;
+                        std::ifstream schedstatFile(taskPath + "/" + tid + "/schedstat");
+                        if (schedstatFile.is_open()) {
+                            schedstatFile >> runtimeNs;
+                        }
+                        unsigned long long counter = (runtimeNs > 0) ? runtimeNs : threadTicks;
+                        int lastCpu = -1;
+                        if (fields.size() > 36) {
+                            try {
+                                lastCpu = std::stoi(fields[36]); // stat field 39: processor
+                            } catch (...) {
+                                lastCpu = -1;
+                            }
+                        }
+                        unsigned long long delta = 0;
+                        auto itPrev = prevCounters.find(tid);
+                        if (itPrev != prevCounters.end() && counter >= itPrev->second) {
+                            delta = counter - itPrev->second;
+                        }
+                        currentCounters[tid] = counter;
+                        entries.push_back({tid, name, prio, lastCpu, delta, 0.0});
+                        continue;
+                    }
+                }
+                currentCounters[tid] = 0;
+                entries.push_back({tid, name, prio, -1, 0, 0.0});
             }
         }
     }
     closedir(taskDir);
+
+    unsigned long long totalDelta = 0;
+    for (const auto& e : entries) totalDelta += e.deltaTicks;
+    if (totalDelta > 0) {
+        for (auto& e : entries) {
+            e.cpuSharePercent = (double)e.deltaTicks * 100.0 / (double)totalDelta;
+            nextShares[e.tid] = e.cpuSharePercent;
+        }
+    } else if (!prevShares.empty()) {
+        for (auto& e : entries) {
+            auto it = prevShares.find(e.tid);
+            if (it != prevShares.end()) {
+                e.cpuSharePercent = it->second;
+                nextShares[e.tid] = e.cpuSharePercent;
+            }
+        }
+    }
+    prevCounters.swap(currentCounters);
+    prevShares.swap(nextShares);
+
+    std::sort(entries.begin(), entries.end(), [](const ThreadEntry& a, const ThreadEntry& b) {
+        if (a.priority != b.priority) return a.priority < b.priority;
+        return a.tid < b.tid;
+    });
+
+    for (const auto& e : entries) {
+        std::ostringstream cpuShare;
+        cpuShare << std::fixed << std::setprecision(1) << e.cpuSharePercent;
+        // Format: tid:priority:lastCpu:cpuShare:name (name can include ':', parser uses limit=5)
+        threads.push_back(
+            e.tid + ":" + std::to_string(e.priority) + ":" + std::to_string(e.lastCpu) + ":" +
+            cpuShare.str() + ":" + e.name
+        );
+    }
     return threads;
 }
 
@@ -290,4 +397,22 @@ void get_page_faults(const std::string& pid, std::unordered_map<std::string, std
     if (ss >> token) out["minflt"] = token;
     ss >> token;
     if (ss >> token) out["majflt"] = token;
+}
+
+void get_io_syscall_counts(const std::string& pid, unsigned long long& syscr, unsigned long long& syscw) {
+    syscr = 0;
+    syscw = 0;
+    std::ifstream ioFile("/proc/" + pid + "/io");
+    if (!ioFile.is_open()) return;
+
+    std::string line;
+    while (std::getline(ioFile, line)) {
+        if (line.rfind("syscr:", 0) == 0) {
+            std::stringstream ss(line.substr(6));
+            ss >> syscr;
+        } else if (line.rfind("syscw:", 0) == 0) {
+            std::stringstream ss(line.substr(6));
+            ss >> syscw;
+        }
+    }
 }

@@ -16,6 +16,7 @@ add_library(
         memory_stats.cpp
         net_stats.cpp
         disk_stats.cpp
+        battery_stats.cpp
         performance_mini.cpp)
 
 find_library(

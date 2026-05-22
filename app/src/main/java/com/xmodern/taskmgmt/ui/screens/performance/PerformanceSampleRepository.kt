@@ -12,7 +12,8 @@ object PerformanceSampleRepository {
             memoryCategory(),
             diskCategory(),
             ethernetCategory(),
-            gpuCategory()
+            gpuCategory(),
+            batteryCategory()
         )
     }
 
@@ -176,6 +177,39 @@ object PerformanceSampleRepository {
                 StatItem("Dedicated GPU memory", "0.1/4.0 GB"),
                 StatItem("Shared GPU memory", "0.1/16.0 GB"),
                 StatItem("Driver version", "1.2.0")
+            )
+        )
+    }
+
+    private fun batteryCategory(): PerformanceCategory {
+        val color = Color(0xFFF6B73C)
+        return PerformanceCategory(
+            id = "battery",
+            displayName = "Battery",
+            summaryText = "0%",
+            seriesColor = color,
+            timeSeries = series(seed = 7, base = 75f, variation = 2f, spike = 0f),
+            hardwareName = "Battery",
+            hardwareSubtitle = "",
+            headerRightPrimary = "",
+            headerRightSecondary = "",
+            chartLabel = "Battery level",
+            leftStats = listOf(
+                StatItem("Type", "—"),
+                StatItem("Power source", "—"),
+                StatItem("Technology", "—"),
+                StatItem("Temperature", "—"),
+                StatItem("Voltage", "—"),
+                StatItem("Current now", "—"),
+                StatItem("Power now", "—")
+            ),
+            rightStats = listOf(
+                StatItem("Charge type", "—"),
+                StatItem("Cycles", "—"),
+                StatItem("Current charge", "—"),
+                StatItem("Max charge", "—"),
+                StatItem("Level", "0%"),
+                StatItem("Time", "—")
             )
         )
     }

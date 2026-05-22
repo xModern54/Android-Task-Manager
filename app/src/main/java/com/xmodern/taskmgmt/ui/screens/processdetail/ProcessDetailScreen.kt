@@ -1,6 +1,11 @@
 package com.xmodern.taskmgmt.ui.screens.processdetail
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,7 +71,7 @@ import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ProcessDetailScreen(
     pid: Int,
@@ -74,8 +79,9 @@ fun ProcessDetailScreen(
     onBack: () -> Unit
 ) {
     val processDetail by viewModel.selectedProcessDetails.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Overview", "Statistics", "Modules", "Threads")
+    val tabs = listOf("Main", "Stats", "Modules", "Threads")
+    val pagerState = rememberPagerState(pageCount = { tabs.size })
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(pid) {
         while (isActive) {
@@ -191,31 +197,40 @@ fun ProcessDetailScreen(
 
                 // Tabs
                 TabRow(
-                    selectedTabIndex = selectedTab,
+                    selectedTabIndex = pagerState.currentPage,
                     containerColor = DarkSurface,
                     contentColor = TextWhite,
                     indicator = { tabPositions ->
                         TabRowDefaults.Indicator(
-                            Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                            Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                 ) {
                     tabs.forEachIndexed { index, title ->
                         Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
+                            selected = pagerState.currentPage == index,
+                            onClick = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
                             text = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         )
                     }
                 }
 
-                // Tab Content
-                when (selectedTab) {
-                    0 -> OverviewTab(detail)
-                    1 -> StatisticsTab(detail)
-                    2 -> ModulesTab(detail.modules)
-                    3 -> ThreadsTab(detail.threadList)
+                // Tab Content (HorizontalPager)
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.weight(1f)
+                ) { page ->
+                    when (page) {
+                        0 -> OverviewTab(detail)
+                        1 -> StatisticsTab(detail)
+                        2 -> ModulesTab(detail.modules)
+                        3 -> ThreadsTab(detail.threadList)
+                    }
                 }
             }
         }
@@ -236,6 +251,9 @@ fun OverviewTab(detail: ProcessDetail) {
             DetailRow("PPID", detail.ppid)
             DetailRow("User ID", detail.user)
             DetailRow("Path", detail.exePath)
+            DetailRow("Syscalls (Total)", detail.syscallsTotal)
+            DetailRow("Syscalls Read", detail.syscallsRead)
+            DetailRow("Syscalls Write", detail.syscallsWrite)
         }
         DetailCard("Time") {
             DetailRow("Elapsed Time", detail.elapsedTime)
@@ -337,10 +355,12 @@ fun ThreadsTab(threads: List<String>) {
             item { Text("No threads info available.", color = TextGrey) }
         } else {
             items(threads) { threadInfo ->
-                // Format tid:name
-                val parts = threadInfo.split(":", limit = 2)
-                val tid = parts.getOrNull(0) ?: "?"
-                val name = parts.getOrNull(1) ?: "Unknown"
+                // Format: tid:priority:lastCpu:cpuShare:name
+                val parts = threadInfo.split(":", limit = 5)
+                val prio = parts.getOrNull(1) ?: "?"
+                val lastCpu = parts.getOrNull(2) ?: "?"
+                val cpuShare = parts.getOrNull(3) ?: "0.0"
+                val name = parts.getOrNull(4) ?: parts.getOrNull(3) ?: "Unknown"
 
                 Row(
                     modifier = Modifier
@@ -356,7 +376,21 @@ fun ThreadsTab(threads: List<String>) {
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        text = "TID: $tid",
+                        text = "Core:$lastCpu",
+                        color = TextGrey,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.padding(horizontal = 10.dp)
+                    )
+                    Text(
+                        text = "CPU:$cpuShare%",
+                        color = TextGrey,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.padding(end = 10.dp)
+                    )
+                    Text(
+                        text = "P:$prio",
                         color = TextGrey,
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace

@@ -96,6 +96,26 @@ data class NetSnapshot(
     val packetsTotal: Long
 )
 
+data class BatterySnapshot(
+    val type: String,
+    val levelPercent: Double,
+    val chargeNow: Long,
+    val chargeFull: Long,
+    val chargeUnit: String,
+    val status: String,
+    val powerSource: String,
+    val tempDeciC: Int,
+    val voltageNowUv: Long,
+    val currentNowUa: Long,
+    val powerNowUw: Long,
+    val chargeType: String,
+    val cycleCount: Int,
+    val timeToFullSec: Long,
+    val timeToEmptySec: Long,
+    val technology: String,
+    val error: String
+)
+
 data class MiniSnapshot(
     val timestampMs: Long,
     val cpuUtil: Double,
@@ -109,7 +129,8 @@ data class MiniSnapshot(
     val netTxBytes: Long,
     val netSendBps: Long,
     val netRecvBps: Long,
-    val gpuUtil: Double
+    val gpuUtil: Double,
+    val batteryLevelPercent: Double
 )
 
 class PerformanceViewModel(application: Application) : AndroidViewModel(application) {
@@ -145,6 +166,12 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _netSeries = MutableStateFlow<List<Float>>(emptyList())
     val netSeries: StateFlow<List<Float>> = _netSeries.asStateFlow()
+
+    private val _batterySnapshot = MutableStateFlow<BatterySnapshot?>(null)
+    val batterySnapshot: StateFlow<BatterySnapshot?> = _batterySnapshot.asStateFlow()
+
+    private val _batterySeries = MutableStateFlow<List<Float>>(emptyList())
+    val batterySeries: StateFlow<List<Float>> = _batterySeries.asStateFlow()
 
     private val _miniSnapshot = MutableStateFlow<MiniSnapshot?>(null)
     val miniSnapshot: StateFlow<MiniSnapshot?> = _miniSnapshot.asStateFlow()
@@ -377,6 +404,40 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun refreshBatterySnapshot() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val json = rootManager.getBatterySnapshotJson() ?: return@launch
+            try {
+                val obj = JSONObject(json)
+                val snapshot = BatterySnapshot(
+                    type = obj.optString("type", "Battery"),
+                    levelPercent = obj.optDouble("levelPercent", -1.0),
+                    chargeNow = obj.optLong("chargeNow", 0L),
+                    chargeFull = obj.optLong("chargeFull", 0L),
+                    chargeUnit = obj.optString("chargeUnit", ""),
+                    status = obj.optString("status", ""),
+                    powerSource = obj.optString("powerSource", "Battery"),
+                    tempDeciC = obj.optInt("tempDeciC", -1),
+                    voltageNowUv = obj.optLong("voltageNowUv", 0L),
+                    currentNowUa = obj.optLong("currentNowUa", 0L),
+                    powerNowUw = obj.optLong("powerNowUw", 0L),
+                    chargeType = obj.optString("chargeType", "—"),
+                    cycleCount = obj.optInt("cycleCount", -1),
+                    timeToFullSec = obj.optLong("timeToFullSec", -1L),
+                    timeToEmptySec = obj.optLong("timeToEmptySec", -1L),
+                    technology = obj.optString("technology", "—"),
+                    error = obj.optString("error", "")
+                )
+                _batterySnapshot.value = snapshot
+                val clamped = snapshot.levelPercent.coerceIn(0.0, 100.0).toFloat()
+                pushSeries(_batterySeries, clamped)
+                lastFullUpdatedMs["battery"] = System.currentTimeMillis()
+            } catch (e: Exception) {
+                Log.e("TaskManager", "Battery snapshot parse error", e)
+            }
+        }
+    }
+
     fun refreshMiniSnapshot() {
         viewModelScope.launch(Dispatchers.IO) {
             val json = rootManager.getPerformanceMiniSnapshotJson() ?: return@launch
@@ -404,6 +465,9 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                 val gpuObj = obj.optJSONObject("gpu")
                 val gpuUtil = gpuObj?.optDouble("util", 0.0) ?: 0.0
 
+                val batteryObj = obj.optJSONObject("battery")
+                val batteryLevelPercent = batteryObj?.optDouble("levelPercent", -1.0) ?: -1.0
+
                 val miniNetBps = computeMiniNetBps(netRx, netTx, ts)
                 _miniSnapshot.value = MiniSnapshot(
                     timestampMs = ts,
@@ -418,7 +482,8 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
                     netTxBytes = netTx,
                     netSendBps = miniNetBps.second,
                     netRecvBps = miniNetBps.first,
-                    gpuUtil = gpuUtil
+                    gpuUtil = gpuUtil,
+                    batteryLevelPercent = batteryLevelPercent
                 )
 
                 val now = System.currentTimeMillis()
@@ -443,6 +508,10 @@ class PerformanceViewModel(application: Application) : AndroidViewModel(applicat
 
                 if (!shouldUseFull("gpu", now)) {
                     pushSeries(_gpuSeries, gpuUtil.coerceIn(0.0, 100.0).toFloat())
+                }
+
+                if (!shouldUseFull("battery", now)) {
+                    pushSeries(_batterySeries, batteryLevelPercent.coerceIn(0.0, 100.0).toFloat())
                 }
             } catch (e: Exception) {
                 Log.e("TaskManager", "Mini snapshot parse error", e)

@@ -17,3 +17,4 @@ std::vector<std::string> get_modules_list(const std::string& pid);
 std::vector<std::string> get_threads_list(const std::string& pid);
 void get_detailed_status(const std::string& pid, std::unordered_map<std::string, std::string>& out);
 void get_page_faults(const std::string& pid, std::unordered_map<std::string, std::string>& out);
+void get_io_syscall_counts(const std::string& pid, unsigned long long& syscr, unsigned long long& syscw);

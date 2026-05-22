@@ -16,294 +16,45 @@ class RootBackendService : RootService() {
     override fun onBind(intent: Intent): IBinder {
         Log.d("TaskManager", "RootBackendService Bound")
         return object : IRootService.Stub() {
-            override fun getTestString(): String {
-                return NativeBridge.hello()
+            override fun getTestString(): String = NativeBridge.hello()
+
+            override fun getProcessList(): String {
+                Log.d("TaskManager", "NativeBridge.getProcessList called")
+                return NativeBridge.getProcessList()
             }
 
-                        override fun getProcessList(): String {
+            override fun getProcessExtendedInfo(pid: Int): String =
+                NativeBridge.getProcessExtendedInfo(pid)
 
-                            Log.d("TaskManager", "NativeBridge.getProcessList called")
+            override fun getProcessDeepSnapshot(pid: Int): String =
+                NativeBridge.getProcessDeepSnapshot(pid)
 
-                            return NativeBridge.getProcessList()
+            override fun sendSignal(pid: Int, signal: Int): Boolean =
+                NativeBridge.sendSignal(pid, signal)
 
-                        }
+            override fun getKillCandidates(): String = NativeBridge.getKillCandidates()
 
-            
+            override fun executeKillTransaction(packages: String): Long =
+                NativeBridge.executeKillTransaction(packages)
 
-                                    override fun getProcessExtendedInfo(pid: Int): String {
-                return NativeBridge.getProcessExtendedInfo(pid)
-            }
+            override fun getFreeRam(): Long = NativeBridge.getFreeRam()
 
-            override fun getProcessDeepSnapshot(pid: Int): String {
-                return NativeBridge.getProcessDeepSnapshot(pid)
-            }
+            override fun getCpuSnapshotJson(): String = NativeBridge.getCpuSnapshotJson()
 
-            override fun sendSignal(pid: Int, signal: Int): Boolean {
+            override fun getVulkanInfoJson(): String = NativeBridge.getVulkanInfoJson()
 
-            
+            override fun getGpuSnapshotJson(): String = NativeBridge.getGpuSnapshotJson()
 
-                        
+            override fun getMemorySnapshotJson(): String = NativeBridge.getMemorySnapshotJson()
 
-            
+            override fun getDiskSnapshotJson(): String = NativeBridge.getDiskSnapshotJson()
 
-                                                    return NativeBridge.sendSignal(pid, signal)
+            override fun getNetSnapshotJson(): String = NativeBridge.getNetSnapshotJson()
 
-            
+            override fun getPerformanceMiniSnapshotJson(): String =
+                NativeBridge.getPerformanceMiniSnapshotJson()
 
-                        
-
-            
-
-                                                }
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                override fun getKillCandidates(): String {
-
-            
-
-                        
-
-            
-
-                                                    return NativeBridge.getKillCandidates()
-
-            
-
-                        
-
-            
-
-                                                }
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                            override fun executeKillTransaction(packages: String): Long {
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                                return NativeBridge.executeKillTransaction(packages)
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                            }
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                            override fun getFreeRam(): Long {
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                                return NativeBridge.getFreeRam()
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                            }
-
-                                                            override fun getCpuSnapshotJson(): String {
-                                                                return NativeBridge.getCpuSnapshotJson()
-                                                            }
-
-                                                            override fun getVulkanInfoJson(): String {
-                                                                return NativeBridge.getVulkanInfoJson()
-                                                            }
-
-                                                            override fun getGpuSnapshotJson(): String {
-                                                                return NativeBridge.getGpuSnapshotJson()
-                                                            }
-
-                                                            override fun getMemorySnapshotJson(): String {
-                                                                return NativeBridge.getMemorySnapshotJson()
-                                                            }
-
-                                                            override fun getDiskSnapshotJson(): String {
-                                                                return NativeBridge.getDiskSnapshotJson()
-                                                            }
-
-                                                            override fun getNetSnapshotJson(): String {
-                                                                return NativeBridge.getNetSnapshotJson()
-                                                            }
-
-                                                            override fun getPerformanceMiniSnapshotJson(): String {
-                                                                return NativeBridge.getPerformanceMiniSnapshotJson()
-                                                            }
-
-
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                        }
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                    }
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                }
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
-
-                                                
-
-            
-
-                        
-
-            
-
-                                    
-
-            
-
-                        
-
-            
+            override fun getBatterySnapshotJson(): String = NativeBridge.getBatterySnapshotJson()
+        }
+    }
+}

@@ -12,8 +12,8 @@ android {
         applicationId = "com.xmodern.taskmgmt"
         minSdk = 24
         targetSdk = 34
-        versionCode = 50
-        versionName = "1.8-beta"
+        versionCode = 100
+        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

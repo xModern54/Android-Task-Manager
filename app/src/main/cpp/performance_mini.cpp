@@ -1,5 +1,6 @@
 #include "performance_mini.h"
 #include "native_utils.h"
+#include "battery_stats.h"
 
 #include <dirent.h>
 #include <sys/statvfs.h>
@@ -326,6 +327,7 @@ std::string get_performance_mini_snapshot_json() {
     NetCountersMini net = get_net_counters_mini();
 
     int gpuUtil = read_gpu_busy_percent();
+    BatteryInfo battery = read_battery_info();
 
     std::stringstream ss;
     ss << "{";
@@ -334,7 +336,8 @@ std::string get_performance_mini_snapshot_json() {
     ss << "\"mem\":{\"usedBytes\":" << memUsed << ",\"totalBytes\":" << memTotal << "},";
     ss << "\"disk\":{\"readBps\":" << diskReadBps << ",\"writeBps\":" << diskWriteBps << "},";
     ss << "\"net\":{\"iface\":\"" << escape_json(net.iface) << "\",\"rxBytes\":" << net.rxBytes << ",\"txBytes\":" << net.txBytes << "},";
-    ss << "\"gpu\":{\"util\":" << gpuUtil << "}";
+    ss << "\"gpu\":{\"util\":" << gpuUtil << "},";
+    ss << "\"battery\":{\"levelPercent\":" << battery.levelPercent << "}";
     ss << "}";
     return ss.str();
 }

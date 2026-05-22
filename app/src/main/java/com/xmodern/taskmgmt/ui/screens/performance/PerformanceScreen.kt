@@ -67,12 +67,15 @@ fun PerformanceScreen(
     diskSeries: List<Float>,
     netSnapshot: NetSnapshot?,
     netSeries: List<Float>,
+    batterySnapshot: BatterySnapshot?,
+    batterySeries: List<Float>,
     miniSnapshot: MiniSnapshot?,
     onCpuPoll: () -> Unit,
     onGpuPoll: () -> Unit,
     onMemoryPoll: () -> Unit,
     onDiskPoll: () -> Unit,
     onNetPoll: () -> Unit,
+    onBatteryPoll: () -> Unit,
     onMiniPoll: () -> Unit,
     onSelectedCategoryChanged: (String) -> Unit
 ) {
@@ -119,6 +122,11 @@ fun PerformanceScreen(
                     onNetPoll()
                     delay(1000)
                 }
+            } else if (selectedId == "battery") {
+                while (isActive) {
+                    onBatteryPoll()
+                    delay(1000)
+                }
             }
         }
     }
@@ -130,6 +138,7 @@ fun PerformanceScreen(
             "disk" -> miniSnapshot?.let { diskCategoryFromMini(category, it, diskSeries) } ?: category
             "ethernet" -> miniSnapshot?.let { netCategoryFromMini(category, it, netSeries) } ?: category
             "gpu" -> miniSnapshot?.let { gpuCategoryFromMini(category, it, gpuSeries) } ?: category
+            "battery" -> miniSnapshot?.let { batteryCategoryFromMini(category, it, batterySeries) } ?: category
             else -> category
         }
 
@@ -140,6 +149,7 @@ fun PerformanceScreen(
                 "memory" -> memorySnapshot?.let { memoryCategoryFromSnapshot(withMini, it, memorySeries) } ?: withMini
                 "disk" -> diskSnapshot?.let { diskCategoryFromSnapshot(withMini, it, diskSeries) } ?: withMini
                 "ethernet" -> netSnapshot?.let { netCategoryFromSnapshot(withMini, it, netSeries) } ?: withMini
+                "battery" -> batterySnapshot?.let { batteryCategoryFromSnapshot(withMini, it, batterySeries) } ?: withMini
                 else -> withMini
             }
         } else {
@@ -854,6 +864,24 @@ private fun gpuCategoryFromMini(
     )
 }
 
+private fun batteryCategoryFromMini(
+    base: PerformanceCategory,
+    mini: MiniSnapshot,
+    series: List<Float>
+): PerformanceCategory {
+    val level = mini.batteryLevelPercent.coerceIn(0.0, 100.0)
+    val summary = if (mini.batteryLevelPercent >= 0.0) {
+        String.format("%.0f%%", level)
+    } else {
+        "—"
+    }
+    val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+    return base.copy(
+        summaryText = summary,
+        timeSeries = chartSeries
+    )
+}
+
 private fun diskCategoryFromSnapshot(
     base: PerformanceCategory,
     snapshot: DiskSnapshot,
@@ -931,6 +959,65 @@ private fun netCategoryFromSnapshot(
             StatItem("Adapter name", adapterName),
             StatItem("SSID", ssidText),
             StatItem("IPv4", ipText)
+        )
+    )
+}
+
+private fun batteryCategoryFromSnapshot(
+    base: PerformanceCategory,
+    snapshot: BatterySnapshot,
+    series: List<Float>
+): PerformanceCategory {
+    val level = snapshot.levelPercent.coerceIn(0.0, 100.0)
+    val levelText = if (snapshot.levelPercent >= 0.0) String.format("%.0f%%", level) else "—"
+    val typeText = snapshot.type.ifBlank { "Battery" }
+    val currentCharge = formatChargeValue(snapshot.chargeNow, snapshot.chargeUnit)
+    val maxCharge = formatChargeValue(snapshot.chargeFull, snapshot.chargeUnit)
+    val sourceText = snapshot.powerSource.ifBlank { "—" }
+    val tempText = formatBatteryTemp(snapshot.tempDeciC)
+    val voltageText = formatBatteryVoltage(snapshot.voltageNowUv)
+    val currentText = formatBatteryCurrent(snapshot.currentNowUa)
+    val powerText = formatBatteryPower(snapshot.powerNowUw, snapshot.voltageNowUv, snapshot.currentNowUa)
+    val chargeTypeText = snapshot.chargeType.ifBlank { "—" }
+    val cycleText = if (snapshot.cycleCount >= 0) snapshot.cycleCount.toString() else "—"
+    val technologyText = snapshot.technology.ifBlank { "—" }
+    val ttfText = formatBatteryDuration(snapshot.timeToFullSec)
+    val tteText = formatBatteryDuration(snapshot.timeToEmptySec)
+    val etaLabel = when {
+        snapshot.status.equals("Charging", ignoreCase = true) -> "Time to full"
+        snapshot.status.equals("Discharging", ignoreCase = true) -> "Time to empty"
+        snapshot.timeToFullSec >= 0 -> "Time to full"
+        snapshot.timeToEmptySec >= 0 -> "Time to empty"
+        else -> "Time"
+    }
+    val etaValue = when (etaLabel) {
+        "Time to full" -> ttfText
+        "Time to empty" -> tteText
+        else -> "—"
+    }
+    val chartSeries = if (series.isEmpty()) List(60) { 0f } else series
+
+    return base.copy(
+        summaryText = levelText,
+        hardwareName = typeText,
+        hardwareSubtitle = snapshot.status.ifBlank { null },
+        timeSeries = chartSeries,
+        leftStats = listOf(
+            StatItem("Type", typeText),
+            StatItem("Power source", sourceText),
+            StatItem("Technology", technologyText),
+            StatItem("Temperature", tempText),
+            StatItem("Voltage", voltageText),
+            StatItem("Current now", currentText),
+            StatItem("Power now", powerText)
+        ),
+        rightStats = listOf(
+            StatItem("Charge type", chargeTypeText),
+            StatItem("Cycles", cycleText),
+            StatItem("Current charge", currentCharge),
+            StatItem("Max charge", maxCharge),
+            StatItem("Level", levelText),
+            StatItem(etaLabel, etaValue)
         )
     )
 }
@@ -1013,4 +1100,49 @@ private fun formatDriverDate(iso: String): String {
     val month = iso.substring(5, 7)
     val day = iso.substring(8, 10)
     return "$day.$month.$year"
+}
+
+private fun formatChargeValue(value: Long, unit: String): String {
+    if (value <= 0) return "—"
+    return when (unit) {
+        "uAh" -> String.format("%.0f mAh", value / 1000.0)
+        "uWh" -> String.format("%.0f mWh", value / 1000.0)
+        else -> value.toString()
+    }
+}
+
+private fun formatBatteryTemp(deciC: Int): String {
+    if (deciC < 0) return "—"
+    return String.format("%.1f °C", deciC / 10.0)
+}
+
+private fun formatBatteryVoltage(microVolts: Long): String {
+    if (microVolts <= 0) return "—"
+    return String.format("%.3f V", microVolts / 1_000_000.0)
+}
+
+private fun formatBatteryCurrent(microAmps: Long): String {
+    if (microAmps == 0L) return "0 mA"
+    return String.format("%.0f mA", microAmps / 1000.0)
+}
+
+private fun formatBatteryPower(powerMicroW: Long, voltageUv: Long, currentUa: Long): String {
+    val watts = when {
+        powerMicroW > 0 -> powerMicroW / 1_000_000.0
+        voltageUv > 0 && currentUa != 0L -> (voltageUv / 1_000_000.0) * (currentUa / 1_000_000.0)
+        else -> 0.0
+    }
+    if (watts == 0.0) return "0.00 W"
+    return String.format("%.2f W", watts)
+}
+
+private fun formatBatteryDuration(seconds: Long): String {
+    if (seconds <= 0) return "—"
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    return if (h > 0) {
+        String.format("%dh %02dm", h, m)
+    } else {
+        String.format("%dm", m)
+    }
 }

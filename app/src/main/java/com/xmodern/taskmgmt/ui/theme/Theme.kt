@@ -31,10 +31,11 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun TaskManagerTheme(
     dynamicColor: Boolean = true,
+    forceDark: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    val isDark = isSystemInDarkTheme()
+    val isDark = forceDark || isSystemInDarkTheme()
     val colorScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {

@@ -51,6 +51,8 @@ private fun PerformanceRoot(onBack: () -> Unit) {
     val diskSeries by viewModel.diskSeries.collectAsState()
     val netSnapshot by viewModel.netSnapshot.collectAsState()
     val netSeries by viewModel.netSeries.collectAsState()
+    val batterySnapshot by viewModel.batterySnapshot.collectAsState()
+    val batterySeries by viewModel.batterySeries.collectAsState()
     val miniSnapshot by viewModel.miniSnapshot.collectAsState()
 
     Scaffold(
@@ -84,12 +86,15 @@ private fun PerformanceRoot(onBack: () -> Unit) {
             diskSeries = diskSeries,
             netSnapshot = netSnapshot,
             netSeries = netSeries,
+            batterySnapshot = batterySnapshot,
+            batterySeries = batterySeries,
             miniSnapshot = miniSnapshot,
             onCpuPoll = { viewModel.refreshCpuSnapshot() },
             onGpuPoll = { viewModel.refreshGpuSnapshot() },
             onMemoryPoll = { viewModel.refreshMemorySnapshot() },
             onDiskPoll = { viewModel.refreshDiskSnapshot() },
             onNetPoll = { viewModel.refreshNetSnapshot() },
+            onBatteryPoll = { viewModel.refreshBatterySnapshot() },
             onMiniPoll = { viewModel.refreshMiniSnapshot() },
             onSelectedCategoryChanged = { viewModel.setSelectedCategory(it) }
         )

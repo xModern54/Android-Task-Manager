@@ -45,27 +45,14 @@ class RootConnectionManager(private val context: Context) {
         }
     }
 
-        fun getProcessList(): String? {
-
-            return try {
-
-                val result = rootService?.processList
-
-                // Log.d("TaskManager", "Fetched Data Length: ${result?.length ?: "null"}") // Too spammy
-
-                result
-
-            } catch (e: Exception) {
-
-                Log.e("TaskManager", "Error fetching process list", e)
-
-                null
-
-            }
-
+    fun getProcessList(): String? {
+        return try {
+            rootService?.processList
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error fetching process list", e)
+            null
         }
-
-    
+    }
 
     fun getProcessExtendedInfo(pid: Int): String? {
         return try {
@@ -86,308 +73,32 @@ class RootConnectionManager(private val context: Context) {
     }
 
     fun sendSignal(pid: Int, signal: Int): Boolean {
-
-    
-
-        
-
-    
-
-                    return try {
-
-    
-
-        
-
-    
-
-                        rootService?.sendSignal(pid, signal) ?: false
-
-    
-
-        
-
-    
-
-                    } catch (e: Exception) {
-
-    
-
-        
-
-    
-
-                        Log.e("TaskManager", "Error sending signal", e)
-
-    
-
-        
-
-    
-
-                        false
-
-    
-
-        
-
-    
-
-                    }
-
-    
-
-        
-
-    
-
-                }
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                fun getKillCandidates(): List<String> {
-
-    
-
-        
-
-    
-
-                    return try {
-
-    
-
-        
-
-    
-
-                        rootService?.killCandidates?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
-
-    
-
-        
-
-    
-
-                    } catch (e: Exception) {
-
-    
-
-        
-
-    
-
-                        Log.e("TaskManager", "Error getting candidates", e)
-
-    
-
-        
-
-    
-
-                        emptyList()
-
-    
-
-        
-
-    
-
-                    }
-
-    
-
-        
-
-    
-
-                }
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    fun executeKillTransaction(packages: List<String>): Long {
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                        return try {
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                            val payload = packages.joinToString("|")
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                            rootService?.executeKillTransaction(payload) ?: 0L
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                        } catch (e: Exception) {
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                            Log.e("TaskManager", "Error executing transaction", e)
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                            0L
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                        }
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    }
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
+        return try {
+            rootService?.sendSignal(pid, signal) ?: false
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error sending signal", e)
+            false
+        }
+    }
+
+    fun getKillCandidates(): List<String> {
+        return try {
+            rootService?.killCandidates?.split("|")?.filter { it.isNotEmpty() } ?: emptyList()
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error getting candidates", e)
+            emptyList()
+        }
+    }
+
+    fun executeKillTransaction(packages: List<String>): Long {
+        return try {
+            val payload = packages.joinToString("|")
+            rootService?.executeKillTransaction(payload) ?: 0L
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error executing transaction", e)
+            0L
+        }
+    }
 
     fun getFreeRam(): Long {
         return try {
@@ -461,4 +172,12 @@ class RootConnectionManager(private val context: Context) {
         }
     }
 
+    fun getBatterySnapshotJson(): String? {
+        return try {
+            rootService?.batterySnapshotJson
+        } catch (e: Exception) {
+            Log.e("TaskManager", "Error getting battery snapshot", e)
+            null
+        }
+    }
 }

@@ -43,6 +43,8 @@ object NativeBridge {
     external fun getNetSnapshotJson(): String
 
     external fun getPerformanceMiniSnapshotJson(): String
+
+    external fun getBatterySnapshotJson(): String
 }
 
                 

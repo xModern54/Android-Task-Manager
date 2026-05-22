@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
                 checkRoot()
             }
 
-            TaskManagerTheme {
+            TaskManagerTheme(forceDark = true) {
                 LogDynamicColorsIfChanged()
                 when (rootState) {
                     RootState.CHECKING -> {

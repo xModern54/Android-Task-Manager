@@ -14,6 +14,9 @@ data class ProcessDetail(
     val nice: String = "",
     val priority: String = "",
     val oomScore: String = "",
+    val syscallsTotal: String = "",
+    val syscallsRead: String = "",
+    val syscallsWrite: String = "",
     val elapsedTime: String = "",
     val exePath: String = "",
     // Deep Stats
@@ -22,5 +25,5 @@ data class ProcessDetail(
     val minorPageFaults: String = "",
     val majorPageFaults: String = "",
     val modules: List<String> = emptyList(),
-    val threadList: List<String> = emptyList() // Format: tid:name
+    val threadList: List<String> = emptyList() // Format: tid:priority:lastCpu:cpuShare:name
 )

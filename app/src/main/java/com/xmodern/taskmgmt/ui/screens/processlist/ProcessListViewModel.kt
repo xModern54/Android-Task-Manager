@@ -230,6 +230,9 @@ class ProcessListViewModel(application: Application) : AndroidViewModel(applicat
             nice = overviewMap["Nice"] ?: "",
             priority = overviewMap["Priority"] ?: "",
             oomScore = overviewMap["OomScore"] ?: "",
+            syscallsTotal = overviewMap["SyscallsTotal"] ?: "0",
+            syscallsRead = overviewMap["SyscallsRead"] ?: "0",
+            syscallsWrite = overviewMap["SyscallsWrite"] ?: "0",
             elapsedTime = overviewMap["ElapsedTime"] ?: "",
             exePath = overviewMap["ExePath"] ?: "",
             
