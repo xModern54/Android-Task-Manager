@@ -51,19 +51,18 @@ Always verify device before install:
 ## Required Workflow After Every User Task (Mandatory)
 After completing **each** user request that changes project behavior or files, always run:
 
-1. Release build:
+1. Compile and build the release APK:
+- `export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home`
+- `export PATH="$JAVA_HOME/bin:$PATH"`
 - `./gradlew :app:assembleRelease`
 
-2. Install on the primary device:
-- `adb -s <detected-transport-or-serial> install -r app/build/outputs/apk/release/app-release.apk`
-
-3. Launch app for testing:
-- `adb -s <detected-transport-or-serial> shell am start -n com.xmodern.taskmgmt/.MainActivity`
+2. Run the finish script (which automates staging, committing, pushing, installing, and launching the application):
+- `./FinishTask.sh "your descriptive commit message"`
 
 Notes:
-- Detect the exact ADB target from `adb devices -l` output (wireless IDs can include prefixes).
-- Report build/install/launch result explicitly.
-- If build fails, fix the issue first, then repeat the full workflow.
+- The script automatically detects the active device serial for `CPH2747` / `3B15BN00V9700000` (including wireless prefixes).
+- Report the build and script execution results explicitly in your final response.
+- If the build or script fails, resolve the issue immediately, and repeat the workflow until successful.
 
 ## Practical Guardrails
 - Do not revert unrelated local changes.
