@@ -131,15 +131,18 @@ class MainActivity : ComponentActivity() {
 
                         AnimatedContent(
                             targetState = currentScreen,
+                            modifier = Modifier.fillMaxSize(),
                             transitionSpec = {
                                 if (initialState == AppScreen.LIST && targetState == AppScreen.DETAIL) {
                                     (slideInHorizontally { width -> width } + fadeIn())
                                         .togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
+                                        .using(null)
                                 } else if (initialState == AppScreen.DETAIL && targetState == AppScreen.LIST) {
                                     (slideInHorizontally { width -> -width } + fadeIn())
                                         .togetherWith(slideOutHorizontally { width -> width } + fadeOut())
+                                        .using(null)
                                 } else {
-                                    fadeIn() togetherWith fadeOut()
+                                    (fadeIn() togetherWith fadeOut()).using(null)
                                 }
                             },
                             label = "screen_transition"
