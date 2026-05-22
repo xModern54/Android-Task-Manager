@@ -1,4 +1,8 @@
-# Android Task Manager
+<p align="center">
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" width="128" height="128" alt="TaskManager Logo"/>
+</p>
+
+<h1 align="center">Android Task Manager</h1>
 
 Android Task Manager is a root-required system monitor for Android. It provides a Windows Task Manager-style process list, detailed per-process information, and a Performance dashboard with live CPU/GPU/Memory/Disk/Network charts.
 
