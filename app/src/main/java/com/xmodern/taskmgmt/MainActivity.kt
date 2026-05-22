@@ -26,6 +26,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import com.xmodern.taskmgmt.ui.screens.processdetail.ProcessDetailScreen
 import com.xmodern.taskmgmt.ui.screens.processlist.KillReviewScreen
 import com.xmodern.taskmgmt.ui.screens.processlist.ProcessListScreen
@@ -40,6 +46,10 @@ import kotlinx.coroutines.withContext
 
 enum class RootState {
     CHECKING, GRANTED, DENIED
+}
+
+enum class AppScreen {
+    LIST, DETAIL, KILL_REVIEW
 }
 
 class MainActivity : ComponentActivity() {
@@ -113,29 +123,54 @@ class MainActivity : ComponentActivity() {
                             viewModel.cancelKillReview()
                         }
 
-                        when {
-                            isReviewingKill -> {
-                                KillReviewScreen(
-                                    viewModel = viewModel,
-                                    onBack = { viewModel.cancelKillReview() }
-                                )
-                            }
-                            selectedPid != null -> {
-                                ProcessDetailScreen(
-                                    pid = selectedPid!!,
-                                    viewModel = viewModel,
-                                    onBack = { 
-                                        selectedPid = null 
-                                        viewModel.clearSelectedProcess()
+                        val currentScreen = when {
+                            isReviewingKill -> AppScreen.KILL_REVIEW
+                            selectedPid != null -> AppScreen.DETAIL
+                            else -> AppScreen.LIST
+                        }
+
+                        AnimatedContent(
+                            targetState = currentScreen,
+                            transitionSpec = {
+                                if (initialState == AppScreen.LIST && targetState == AppScreen.DETAIL) {
+                                    (slideInHorizontally { width -> width } + fadeIn())
+                                        .togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
+                                } else if (initialState == AppScreen.DETAIL && targetState == AppScreen.LIST) {
+                                    (slideInHorizontally { width -> -width } + fadeIn())
+                                        .togetherWith(slideOutHorizontally { width -> width } + fadeOut())
+                                } else {
+                                    fadeIn() togetherWith fadeOut()
+                                }
+                            },
+                            label = "screen_transition"
+                        ) { screen ->
+                            when (screen) {
+                                AppScreen.LIST -> {
+                                    ProcessListScreen(
+                                        viewModel = viewModel,
+                                        listState = processListState,
+                                        onProcessClick = { pid -> selectedPid = pid }
+                                    )
+                                }
+                                AppScreen.DETAIL -> {
+                                    val pid = selectedPid
+                                    if (pid != null) {
+                                        ProcessDetailScreen(
+                                            pid = pid,
+                                            viewModel = viewModel,
+                                            onBack = { 
+                                                selectedPid = null 
+                                                viewModel.clearSelectedProcess()
+                                            }
+                                        )
                                     }
-                                )
-                            }
-                            else -> {
-                                ProcessListScreen(
-                                    viewModel = viewModel,
-                                    listState = processListState,
-                                    onProcessClick = { pid -> selectedPid = pid }
-                                )
+                                }
+                                AppScreen.KILL_REVIEW -> {
+                                    KillReviewScreen(
+                                        viewModel = viewModel,
+                                        onBack = { viewModel.cancelKillReview() }
+                                    )
+                                }
                             }
                         }
                     }
