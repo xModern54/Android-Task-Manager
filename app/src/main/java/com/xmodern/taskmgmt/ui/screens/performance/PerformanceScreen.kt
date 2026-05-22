@@ -102,11 +102,21 @@ fun PerformanceScreen(
         categories.getOrNull(pagerState.currentPage)?.id ?: "memory"
     }
 
+    // Determine all active pages (currently visible or transitioning) during pager swipes
+    val activePages = remember(pagerState.currentPage, pagerState.targetPage, pagerState.settledPage) {
+        setOf(pagerState.currentPage, pagerState.targetPage, pagerState.settledPage).toList()
+    }
+    val activeCategoryIds = remember(activePages, categories) {
+        activePages.mapNotNull { categories.getOrNull(it)?.id }
+    }
+
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Scroll to the active card when the page snaps/settles or changes
     LaunchedEffect(pagerState.currentPage) {
-        lazyListState.animateScrollToItem(pagerState.currentPage)
+        if (pagerState.currentPage in 0 until categories.size) {
+            lazyListState.animateScrollToItem(pagerState.currentPage)
+        }
     }
 
     // Notify parent activity of category selection change
@@ -123,34 +133,71 @@ fun PerformanceScreen(
         }
     }
 
-    LaunchedEffect(selectedId, lifecycleOwner) {
-        lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
-            if (selectedId == "cpu") {
+    // Parallel background polling loops for all active (transitioning) pages
+    val isCpuActive = "cpu" in activeCategoryIds
+    LaunchedEffect(isCpuActive, lifecycleOwner) {
+        if (isCpuActive) {
+            lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 while (isActive) {
                     onCpuPoll()
                     delay(1000)
                 }
-            } else if (selectedId == "gpu") {
+            }
+        }
+    }
+
+    val isGpuActive = "gpu" in activeCategoryIds
+    LaunchedEffect(isGpuActive, lifecycleOwner) {
+        if (isGpuActive) {
+            lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 while (isActive) {
                     onGpuPoll()
                     delay(1000)
                 }
-            } else if (selectedId == "memory") {
+            }
+        }
+    }
+
+    val isMemoryActive = "memory" in activeCategoryIds
+    LaunchedEffect(isMemoryActive, lifecycleOwner) {
+        if (isMemoryActive) {
+            lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 while (isActive) {
                     onMemoryPoll()
                     delay(500)
                 }
-            } else if (selectedId == "disk") {
+            }
+        }
+    }
+
+    val isDiskActive = "disk" in activeCategoryIds
+    LaunchedEffect(isDiskActive, lifecycleOwner) {
+        if (isDiskActive) {
+            lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 while (isActive) {
                     onDiskPoll()
                     delay(500)
                 }
-            } else if (selectedId == "ethernet") {
+            }
+        }
+    }
+
+    val isNetActive = "ethernet" in activeCategoryIds
+    LaunchedEffect(isNetActive, lifecycleOwner) {
+        if (isNetActive) {
+            lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 while (isActive) {
                     onNetPoll()
                     delay(1000)
                 }
-            } else if (selectedId == "battery") {
+            }
+        }
+    }
+
+    val isBatteryActive = "battery" in activeCategoryIds
+    LaunchedEffect(isBatteryActive, lifecycleOwner) {
+        if (isBatteryActive) {
+            lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 while (isActive) {
                     onBatteryPoll()
                     delay(1000)
@@ -170,7 +217,7 @@ fun PerformanceScreen(
             else -> category
         }
 
-        if (category.id == selectedId) {
+        if (category.id in activeCategoryIds) {
             when (category.id) {
                 "cpu" -> cpuSnapshot?.let { cpuCategoryFromSnapshot(withMini, it, cpuSeries) } ?: withMini
                 "gpu" -> gpuSnapshot?.let { gpuCategoryFromSnapshot(withMini, it, gpuSeries) } ?: withMini
@@ -434,7 +481,7 @@ private fun PerformanceChart(series: List<Float>, color: Color) {
             )
         }
 
-        if (series.isEmpty()) return@Canvas
+        if (series.size < 2) return@Canvas
 
         val maxValue = 100f
         val points = series.mapIndexed { index, value ->
@@ -656,7 +703,7 @@ private fun MiniChartBox(series: List<Float>, color: Color, modifier: Modifier =
                 drawLine(grid, Offset(x, 0f), Offset(x, h), strokeWidth = 1f)
             }
 
-            if (series.isEmpty()) return@Canvas
+            if (series.size < 2) return@Canvas
             val maxValue = 100f
             val points = series.mapIndexed { index, value ->
                 val x = w * (index / (series.size - 1).toFloat())
