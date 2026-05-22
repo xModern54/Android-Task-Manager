@@ -32,6 +32,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import com.xmodern.taskmgmt.ui.screens.processdetail.ProcessDetailScreen
 import com.xmodern.taskmgmt.ui.screens.processlist.KillReviewScreen
 import com.xmodern.taskmgmt.ui.screens.processlist.ProcessListScreen
@@ -133,16 +135,26 @@ class MainActivity : ComponentActivity() {
                             targetState = currentScreen,
                             modifier = Modifier.fillMaxSize(),
                             transitionSpec = {
+                                val duration = 300
                                 if (initialState == AppScreen.LIST && targetState == AppScreen.DETAIL) {
-                                    (slideInHorizontally { width -> width } + fadeIn())
-                                        .togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
+                                    (slideInHorizontally(animationSpec = tween(duration, easing = FastOutSlowInEasing)) { width -> width } + 
+                                            fadeIn(animationSpec = tween(duration)))
+                                        .togetherWith(
+                                            slideOutHorizontally(animationSpec = tween(duration, easing = FastOutSlowInEasing)) { width -> -width / 4 } + 
+                                            fadeOut(animationSpec = tween(duration))
+                                        )
                                         .using(null)
                                 } else if (initialState == AppScreen.DETAIL && targetState == AppScreen.LIST) {
-                                    (slideInHorizontally { width -> -width } + fadeIn())
-                                        .togetherWith(slideOutHorizontally { width -> width } + fadeOut())
+                                    (slideInHorizontally(animationSpec = tween(duration, easing = FastOutSlowInEasing)) { width -> -width / 4 } + 
+                                            fadeIn(animationSpec = tween(duration)))
+                                        .togetherWith(
+                                            slideOutHorizontally(animationSpec = tween(duration, easing = FastOutSlowInEasing)) { width -> width } + 
+                                            fadeOut(animationSpec = tween(duration))
+                                        )
                                         .using(null)
                                 } else {
-                                    (fadeIn() togetherWith fadeOut()).using(null)
+                                    (fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(220)))
+                                        .using(null)
                                 }
                             },
                             label = "screen_transition"
