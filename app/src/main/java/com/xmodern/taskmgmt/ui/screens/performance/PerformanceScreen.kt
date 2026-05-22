@@ -103,8 +103,12 @@ fun PerformanceScreen(
     }
 
     // Determine all active pages (currently visible or transitioning) during pager swipes
-    val activePages = remember(pagerState.currentPage, pagerState.targetPage, pagerState.settledPage) {
-        setOf(pagerState.currentPage, pagerState.targetPage, pagerState.settledPage).toList()
+    val activePages = remember(pagerState.currentPage, pagerState.targetPage, pagerState.settledPage, pagerState.isScrollInProgress) {
+        if (pagerState.isScrollInProgress) {
+            setOf(pagerState.currentPage, pagerState.targetPage).toList()
+        } else {
+            setOf(pagerState.settledPage).toList()
+        }
     }
     val activeCategoryIds = remember(activePages, categories) {
         activePages.mapNotNull { categories.getOrNull(it)?.id }
@@ -112,14 +116,14 @@ fun PerformanceScreen(
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Scroll to the active card when the page snaps/settles or changes
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage in 0 until categories.size) {
-            lazyListState.animateScrollToItem(pagerState.currentPage)
+    // Scroll to the active card ONLY when the page is fully settled, avoiding measure crashes during drags
+    LaunchedEffect(pagerState.settledPage) {
+        if (pagerState.settledPage in 0 until categories.size) {
+            lazyListState.animateScrollToItem(pagerState.settledPage)
         }
     }
 
-    // Notify parent activity of category selection change
+    // Notify parent activity of category selection change immediately
     LaunchedEffect(selectedId) {
         onSelectedCategoryChanged(selectedId)
     }
