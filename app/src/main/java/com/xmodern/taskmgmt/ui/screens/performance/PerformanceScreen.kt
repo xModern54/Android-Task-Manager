@@ -1,5 +1,13 @@
 package com.xmodern.taskmgmt.ui.screens.performance
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +61,7 @@ private val DividerColor = Color(0xFF2A2A2A)
 private val PrimaryText = Color(0xFFEDEDED)
 private val SecondaryText = Color(0xFFA7A7A7)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PerformanceScreen(
     categories: List<PerformanceCategory>,
@@ -79,9 +88,28 @@ fun PerformanceScreen(
     onMiniPoll: () -> Unit,
     onSelectedCategoryChanged: (String) -> Unit
 ) {
-    var selectedId by remember { mutableStateOf("memory") }
+    val coroutineScope = rememberCoroutineScope()
+    val lazyListState = rememberLazyListState()
+
+    // Single source of truth for the active page
+    val pagerState = rememberPagerState(
+        initialPage = categories.indexOfFirst { it.id == "memory" }.coerceAtLeast(0),
+        pageCount = { categories.size }
+    )
+
+    // Derived active category ID from the pager state
+    val selectedId = remember(pagerState.currentPage, categories) {
+        categories.getOrNull(pagerState.currentPage)?.id ?: "memory"
+    }
+
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // Scroll to the active card when the page snaps/settles or changes
+    LaunchedEffect(pagerState.currentPage) {
+        lazyListState.animateScrollToItem(pagerState.currentPage)
+    }
+
+    // Notify parent activity of category selection change
     LaunchedEffect(selectedId) {
         onSelectedCategoryChanged(selectedId)
     }
@@ -167,16 +195,28 @@ fun PerformanceScreen(
     ) {
         CategorySelectorRow(
             categories = displayCategories,
-            selectedId = selected.id,
-            onSelect = { selectedId = it }
+            selectedId = selectedId,
+            lazyListState = lazyListState,
+            onSelect = { targetId ->
+                val targetPage = categories.indexOfFirst { it.id == targetId }.coerceAtLeast(0)
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(targetPage)
+                }
+            }
         )
 
-        MainPanel(
-            category = selected,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        )
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.weight(1f)
+        ) { page ->
+            val category = displayCategories.getOrNull(page) ?: selected
+            MainPanel(
+                category = category,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+        }
     }
 }
 
@@ -184,9 +224,11 @@ fun PerformanceScreen(
 private fun CategorySelectorRow(
     categories: List<PerformanceCategory>,
     selectedId: String,
+    lazyListState: LazyListState,
     onSelect: (String) -> Unit
 ) {
     LazyRow(
+        state = lazyListState,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -209,7 +251,8 @@ private fun CategorySelectorItem(
     onClick: () -> Unit
 ) {
     val borderColor = if (selected) category.seriesColor else DividerColor
-    val container = if (selected) CardBackground.copy(alpha = 0.95f) else CardBackground
+    val container = if (selected) category.seriesColor.copy(alpha = 0.08f) else CardBackground
+    val borderThickness = if (selected) 2.dp else 1.25.dp
 
     Card(
         onClick = onClick,
@@ -217,7 +260,7 @@ private fun CategorySelectorItem(
             .width(164.dp)
             .height(90.dp),
         colors = CardDefaults.cardColors(containerColor = container),
-        border = BorderStroke(1.25.dp, borderColor)
+        border = BorderStroke(borderThickness, borderColor)
     ) {
         Column(
             modifier = Modifier
@@ -228,14 +271,15 @@ private fun CategorySelectorItem(
             Column {
                 Text(
                     text = category.displayName,
-                    color = PrimaryText,
+                    color = if (selected) category.seriesColor else PrimaryText,
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = category.summaryText,
-                    color = SecondaryText,
+                    color = if (selected) PrimaryText else SecondaryText,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
