@@ -134,7 +134,7 @@ data class MiniSnapshot(
 )
 
 class PerformanceViewModel(application: Application) : AndroidViewModel(application) {
-    private val rootManager = RootConnectionManager(application)
+    private val rootManager = RootConnectionManager.getInstance(application)
     private var tempLogCounter = 0
 
     private val _cpuSnapshot = MutableStateFlow<CpuSnapshot?>(null)

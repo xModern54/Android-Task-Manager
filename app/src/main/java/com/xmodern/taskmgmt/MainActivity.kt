@@ -58,8 +58,9 @@ class MainActivity : ComponentActivity() {
                     // If a previous shell exists and was denied, we might need to close it to prompt again
                     // depending on libsu configuration, but usually getShell() is sufficient.
                     // For safety on retry:
-                    if (Shell.getCachedShell() != null) {
-                       try { Shell.getCachedShell()?.close() } catch (e: Exception) { /* Ignore */ }
+                    val cached = Shell.getCachedShell()
+                    if (cached != null && !cached.isRoot) {
+                        try { cached.close() } catch (e: Exception) { /* Ignore */ }
                     }
                     
                     val isRoot = try {

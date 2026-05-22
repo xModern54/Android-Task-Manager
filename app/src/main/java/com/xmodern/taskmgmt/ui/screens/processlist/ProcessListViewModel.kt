@@ -69,7 +69,7 @@ class ProcessListViewModel(application: Application) : AndroidViewModel(applicat
     private val _isReviewingKill = MutableStateFlow(false)
     val isReviewingKill: StateFlow<Boolean> = _isReviewingKill.asStateFlow()
 
-    private val rootManager = RootConnectionManager(application)
+    private val rootManager = RootConnectionManager.getInstance(application)
     private val appCache = AppInfoCache(application)
 
     init {

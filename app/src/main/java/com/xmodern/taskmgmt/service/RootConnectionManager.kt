@@ -9,10 +9,21 @@ import android.util.Log
 import com.xmodern.taskmgmt.IRootService
 import com.topjohnwu.superuser.ipc.RootService
 
-class RootConnectionManager(private val context: Context) {
+class RootConnectionManager private constructor(private val context: Context) {
 
     private var rootService: IRootService? = null
     private var isBound = false
+
+    companion object {
+        @Volatile
+        private var instance: RootConnectionManager? = null
+
+        fun getInstance(context: Context): RootConnectionManager {
+            return instance ?: synchronized(this) {
+                instance ?: RootConnectionManager(context.applicationContext).also { instance = it }
+            }
+        }
+    }
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -29,6 +40,10 @@ class RootConnectionManager(private val context: Context) {
     }
 
     fun bind() {
+        if (isBound || rootService != null) {
+            Log.d("TaskManager", "RootService is already bound or binding, skipping bind.")
+            return
+        }
         Log.d("TaskManager", "Attempting to bind RootService...")
         val intent = Intent(context, RootBackendService::class.java)
         try {
@@ -39,10 +54,10 @@ class RootConnectionManager(private val context: Context) {
     }
 
     fun unbind() {
-        if (isBound) {
-            RootService.unbind(connection)
-            isBound = false
-        }
+        // We keep the binding alive globally to prevent the daemon from stopping
+        // and requesting root access repeatedly when minimizing/restoring the app.
+        // However, we can keep the unbind function as a no-op or conditionally unbind.
+        Log.d("TaskManager", "RootConnectionManager unbind ignored to maintain persistent root daemon.")
     }
 
     fun getProcessList(): String? {
